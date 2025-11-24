@@ -7,10 +7,12 @@
 **Production-grade Infrastructure-as-Code demonstrating modern DevOps practices**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![OpenTofu](https://img.shields.io/badge/OpenTofu-1.6+-purple.svg)](https://opentofu.org/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-k3s-326CE5?logo=kubernetes&logoColor=white)](https://k3s.io/)
-[![Atmos](https://img.shields.io/badge/Atmos-Orchestration-00ADD8)](https://atmos.tools)
-[![Packer](https://img.shields.io/badge/Packer-Image%20Builder-02A8EF?logo=packer&logoColor=white)](https://www.packer.io/)
+[![Proxmox](https://img.shields.io/badge/Proxmox-VE-E57000?logo=proxmox&logoColor=white)](https://www.proxmox.com/)
+[![OpenTofu](https://img.shields.io/badge/OpenTofu-1.6+-FFDA18?logo=opentofu&logoColor=white)](https://opentofu.org/)
+[![Packer](https://img.shields.io/badge/Packer-1.10+-02A8EF?logo=packer&logoColor=white)](https://www.packer.io/)
+[![Atmos](https://img.shields.io/badge/Atmos-Orchestration-00D9FF)](https://atmos.tools)
+[![k3s](https://img.shields.io/badge/k3s-v1.28+-FFC61C?logo=k3s&logoColor=white)](https://k3s.io/)
+[![Argo CD](https://img.shields.io/badge/Argo%20CD-GitOps-EF7B4D?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
 
 </div>
 
