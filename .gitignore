@@ -77,3 +77,7 @@ dist/
 build/
 *.tar.gz
 *.zip
+
+# Python
+venv/*
+site/*
