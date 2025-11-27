@@ -20,11 +20,14 @@
 #   export PM_API_URL="https://10.23.45.10:8006/api2/json"
 #   export PM_API_TOKEN_ID="root@pam!terraform"
 #   export PM_API_TOKEN_SECRET="your-secret-here"
+#
+# WARNING: Never commit real credentials to version control!
 # -----------------------------------------------------------------------------
 
 pm_api_url          = "https://10.23.45.10:8006/api2/json"  # TODO: Update with your Proxmox URL
 pm_api_token_id     = "root@pam!terraform"                   # TODO: Update with your token ID
-pm_api_token_secret = "CHANGEME"                             # TODO: Set your token secret
+# SECURITY: Set pm_api_token_secret via environment variable, not in this file!
+# pm_api_token_secret = "DO_NOT_COMMIT_SECRETS"
 pm_tls_insecure     = true
 
 # -----------------------------------------------------------------------------
