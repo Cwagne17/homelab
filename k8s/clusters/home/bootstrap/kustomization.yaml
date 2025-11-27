@@ -1,0 +1,38 @@
+# =============================================================================
+# Bootstrap Kustomization
+#
+# This kustomization installs Argo CD from upstream manifests.
+# Apply this first to bootstrap the GitOps workflow:
+#
+#   kubectl apply -k k8s/clusters/home/bootstrap
+#
+# Refs: Req 5.1
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+resources:
+  # Local namespace definition
+  - argocd-install.yaml
+
+  # Upstream Argo CD installation manifest
+  # This pulls the stable release from GitHub
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
+
+# Optional: Add patches or customizations here
+# patches:
+#   - patch: |
+#       - op: replace
+#         path: /spec/template/spec/containers/0/args/-
+#         value: --insecure
+#     target:
+#       kind: Deployment
+#       name: argocd-server
+
+# Labels applied to all resources
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  homelab.local/component: bootstrap
