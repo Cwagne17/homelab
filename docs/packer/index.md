@@ -68,6 +68,37 @@ Edit `packer/alma9-k3s-optimized/http/ks.cfg` to:
     The kickstart sets a temporary root password for Packer provisioning.
     This password is only used during build and VMs boot with cloud-init SSH keys.
 
+## Security Hardening
+
+The image includes a **stub script** for OpenSCAP-based security hardening:
+
+### Available Profiles
+
+| Profile | Description |
+|---------|-------------|
+| **STIG** | Security Technical Implementation Guide (DoD) |
+| **CIS Level 1** | Center for Internet Security - basic server |
+| **CIS Level 2** | Center for Internet Security - comprehensive |
+| **OSPP** | Protection Profile for General Purpose OS |
+
+### Enabling Hardening
+
+Edit `packer/alma9-k3s-optimized/scripts/hardening-oscap.sh`:
+
+1. Uncomment the OpenSCAP installation section
+2. Choose your desired profile
+3. Uncomment the remediation section
+
+!!! warning "Test First"
+    Security hardening can break functionality. Always test in a
+    non-production environment before applying to production images.
+
+### References
+
+- [OpenSCAP Project](https://www.open-scap.org/)
+- [SCAP Security Guide](https://github.com/ComplianceAsCode/content)
+- [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks)
+
 ## Next Steps
 
 - [Image Building](building.md) - Build your first image
