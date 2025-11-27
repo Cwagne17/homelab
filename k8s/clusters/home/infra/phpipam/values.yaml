@@ -1,0 +1,130 @@
+# =============================================================================
+# phpIPAM Helm Values
+#
+# Minimal configuration for phpIPAM deployment.
+# This demonstrates Helm chart values with TODO comments for customization.
+#
+# Full values reference:
+#   https://github.com/phpipam/helm-charts/blob/main/charts/phpipam/values.yaml
+#
+# What is phpIPAM?
+#   phpIPAM is an open-source IP address management (IPAM) application.
+#   It helps track IP addresses, subnets, VLANs, and network documentation.
+#   Useful for homelabs with growing network infrastructure.
+#
+# Refs: Req 10.3, 10.5
+# =============================================================================
+---
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+
+service:
+  # TODO: Change to LoadBalancer when MetalLB is configured
+  type: ClusterIP
+  port: 80
+  # Uncomment when using LoadBalancer:
+  # type: LoadBalancer
+  # loadBalancerIP: 10.23.45.100  # TODO: Set your MetalLB IP
+
+# -----------------------------------------------------------------------------
+# Ingress Configuration
+# -----------------------------------------------------------------------------
+
+ingress:
+  enabled: false
+  # TODO: Enable and configure when ingress controller is ready
+  # enabled: true
+  # className: "traefik"
+  # annotations:
+  #   traefik.ingress.kubernetes.io/router.tls: "true"
+  # hosts:
+  #   - host: ipam.home.arpa  # TODO: Set your domain
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # tls:
+  #   - secretName: phpipam-tls
+  #     hosts:
+  #       - ipam.home.arpa
+
+# -----------------------------------------------------------------------------
+# Database Configuration (MariaDB)
+# -----------------------------------------------------------------------------
+
+mariadb:
+  # Use the bundled MariaDB (included in chart dependencies)
+  enabled: true
+
+  auth:
+    database: phpipam
+    username: phpipam
+    # TODO: Set secure passwords before production use
+    password: changeme        # CHANGEME: Set a secure password
+    rootPassword: changeme    # CHANGEME: Set a secure root password
+
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+      # TODO: Set storage class if not using default
+      # storageClass: "local-path"
+
+# -----------------------------------------------------------------------------
+# phpIPAM Application Configuration
+# -----------------------------------------------------------------------------
+
+phpipam:
+  # TODO: Configure admin password
+  adminPassword: changeme    # CHANGEME: Set a secure admin password
+
+  # Application settings
+  name: phpipam
+  user: phpipam
+
+  # Environment variables
+  env:
+    - name: TZ
+      value: "UTC"
+    - name: IPAM_DATABASE_HOST
+      value: phpipam-mariadb
+    - name: IPAM_DATABASE_NAME
+      value: phpipam
+    - name: IPAM_DATABASE_USER
+      value: phpipam
+      # Note: Password is set via secret
+
+# -----------------------------------------------------------------------------
+# Resource Limits
+# -----------------------------------------------------------------------------
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# -----------------------------------------------------------------------------
+# Persistence
+# -----------------------------------------------------------------------------
+
+persistence:
+  enabled: true
+  size: 1Gi
+  # TODO: Set storage class if not using default
+  # storageClass: "local-path"
+
+# -----------------------------------------------------------------------------
+# Pod Configuration
+# -----------------------------------------------------------------------------
+
+# Run as non-root for security
+podSecurityContext:
+  fsGroup: 33
+
+securityContext:
+  runAsUser: 33
+  runAsGroup: 33
+  runAsNonRoot: true
