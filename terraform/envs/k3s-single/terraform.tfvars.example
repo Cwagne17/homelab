@@ -1,0 +1,68 @@
+# =============================================================================
+# k3s-single Environment - Example Variable Values
+#
+# Copy this file to terraform.tfvars and customize for your environment.
+# DO NOT commit terraform.tfvars to version control (contains secrets).
+#
+# Usage:
+#   cp terraform.tfvars.example terraform.tfvars
+#   # Edit terraform.tfvars with your values
+#   tofu init
+#   tofu plan -var-file=../../globals.tfvars
+#   tofu apply -var-file=../../globals.tfvars
+#
+# Refs: Req 7.2, 7.3
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Proxmox Provider
+# Alternatively, set via environment variables:
+#   export PM_API_URL="https://10.23.45.10:8006/api2/json"
+#   export PM_API_TOKEN_ID="root@pam!terraform"
+#   export PM_API_TOKEN_SECRET="your-secret-here"
+#
+# WARNING: Never commit real credentials to version control!
+# -----------------------------------------------------------------------------
+
+pm_api_url          = "https://10.23.45.10:8006/api2/json"  # TODO: Update with your Proxmox URL
+pm_api_token_id     = "root@pam!terraform"                   # TODO: Update with your token ID
+# SECURITY: Set pm_api_token_secret via environment variable, not in this file!
+# pm_api_token_secret = "DO_NOT_COMMIT_SECRETS"
+pm_tls_insecure     = true
+
+# -----------------------------------------------------------------------------
+# Infrastructure
+# -----------------------------------------------------------------------------
+
+proxmox_node   = "pve"                              # TODO: Your Proxmox node name
+template_name  = "alma9-k3-node-amd64-v1.28.5-v1"   # From Packer build
+storage_pool   = "local-lvm"                        # TODO: Your storage pool
+network_bridge = "vmbr0"                            # TODO: Your network bridge
+
+# -----------------------------------------------------------------------------
+# VM Configuration
+# Default: 4 cores, 24GB RAM, 32GB disk
+# -----------------------------------------------------------------------------
+
+vm_name      = "k3s-s1"
+vm_cores     = 4
+vm_memory    = 24576   # 24GB
+vm_disk_size = "32G"
+
+# -----------------------------------------------------------------------------
+# Network Configuration
+# TODO: Update with your network settings
+# -----------------------------------------------------------------------------
+
+vm_ip         = "10.23.45.31/24"   # TODO: Static IP for the VM
+vm_gateway    = "10.23.45.1"       # TODO: Your gateway
+vm_nameserver = "10.23.45.1"       # TODO: Your DNS server
+
+# -----------------------------------------------------------------------------
+# Cloud-init
+# -----------------------------------------------------------------------------
+
+ci_user = "admin"
+
+# TODO: Replace with your SSH public key
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyReplaceMeWithYourActualKey user@example.com"
