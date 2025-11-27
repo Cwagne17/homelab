@@ -1,0 +1,40 @@
+# =============================================================================
+# Home Cluster - Root Kustomization
+#
+# This is the root kustomization that composes all cluster resources.
+# Argo CD's app-of-apps points to this directory.
+#
+# Structure:
+#   - bootstrap/: Argo CD installation (apply manually first)
+#   - infra/: Infrastructure apps (databases, monitoring, etc.)
+#   - apps/: User applications
+#
+# The bootstrap directory is excluded here since it's applied manually
+# before Argo CD is available to manage the cluster.
+#
+# Refs: Req 5.3, 5.4
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Cluster resources to manage
+resources:
+  # Infrastructure applications (phpIPAM, etc.)
+  - infra/
+
+  # User applications (add your apps here)
+  - apps/
+
+  # Note: bootstrap/ is NOT included here because:
+  # 1. It installs Argo CD itself
+  # 2. It must be applied manually before Argo CD exists
+  # 3. Argo CD managing itself creates a chicken-and-egg problem
+  #
+  # Apply bootstrap manually:
+  #   kubectl apply -k k8s/clusters/home/bootstrap
+
+# Common labels for all resources
+commonLabels:
+  homelab.local/cluster: home
+  app.kubernetes.io/managed-by: argocd
