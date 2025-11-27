@@ -1,0 +1,28 @@
+# =============================================================================
+# Infrastructure Kustomization
+#
+# This kustomization aggregates all infrastructure applications:
+#   - Databases
+#   - Monitoring
+#   - IPAM (phpIPAM)
+#   - Other infrastructure services
+#
+# Refs: Req 5.3
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # IP Address Management
+  - phpipam/
+
+  # Add more infrastructure apps here:
+  # - monitoring/
+  # - metallb/
+  # - cert-manager/
+  # - external-dns/
+
+# Common labels for all infra resources
+commonLabels:
+  homelab.local/layer: infra
