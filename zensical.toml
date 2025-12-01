@@ -65,6 +65,10 @@ nav = [
     { "Infrastructure" = "opentofu/infrastructure.md" },
     { "Modules" = "opentofu/modules.md" },
   ]},
+  { "Cloudflare" = [
+    { "Overview" = "cloudflare/index.md" },
+    { "cloudflared LXC" = "cloudflare/cloudflared-lxc.md" },
+  ]},
   { "K3s" = [
     { "Overview" = "k3s/index.md" },
     { "Cluster Setup" = "k3s/cluster.md" },

@@ -1,6 +1,6 @@
 # Infrastructure Deployment
 
-This guide covers deploying Proxmox VMs using OpenTofu/Terraform.
+This guide covers deploying Proxmox VMs and LXC containers using OpenTofu/Terraform.
 
 ## Why OpenTofu?
 
@@ -17,10 +17,20 @@ The `terraform/envs/` directory contains environment-specific configurations:
 
 ```
 terraform/envs/
-└── k3s-single/           # Single-node k3s cluster
-    ├── main.tf           # Module invocation and provider
+├── k3s-single/           # Single-node k3s cluster
+│   ├── main.tf           # Module invocation and provider
+│   ├── variables.tf      # Input variables
+│   ├── outputs.tf        # Output values
+│   └── terraform.tfvars.example
+└── cloudflared_lxc/      # Cloudflare tunnel LXC container
+    ├── main.tf           # Main configuration
+    ├── providers.tf      # Proxmox and Cloudflare providers
     ├── variables.tf      # Input variables
     ├── outputs.tf        # Output values
+    ├── lxc.tf            # Proxmox LXC resource
+    ├── cloudflare.tf     # Cloudflare tunnel and DNS
+    ├── locals.tf         # Computed values
+    ├── config.yaml       # cloudflared config template
     └── terraform.tfvars.example
 ```
 
@@ -134,7 +144,26 @@ backend "s3" {
 }
 ```
 
+## cloudflared_lxc Environment
+
+Deploys a cloudflared LXC container with Cloudflare tunnel integration.
+
+| Resource | Value |
+|----------|-------|
+| Type | LXC Container |
+| CPU | 1 core |
+| Memory | 512 MB |
+| Disk | 4 GB |
+
+This environment also configures:
+
+- Cloudflare Tunnel
+- DNS records for proxied services
+
+For detailed instructions, see [cloudflared LXC](../cloudflare/cloudflared-lxc.md).
+
 ## Next Steps
 
 - [Modules](modules.md) - Understand the proxmox-vm module
+- [Cloudflare](../cloudflare/index.md) - Cloudflare tunnel integration
 - [Overview](index.md) - Return to OpenTofu overview
