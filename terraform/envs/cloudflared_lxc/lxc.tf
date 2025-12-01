@@ -40,9 +40,11 @@ resource "proxmox_lxc" "cloudflared" {
   nameserver = var.lxc_nameserver
 
   # Authentication
+  # Note: For enhanced security, consider using SSH keys only (set lxc_ssh_public_key)
+  # and disabling password authentication after initial setup
   password = var.lxc_password
 
-  # SSH public key (if provided)
+  # SSH public key (if provided) - recommended for secure access
   ssh_public_keys = var.lxc_ssh_public_key != "" ? var.lxc_ssh_public_key : null
 
   # Container options

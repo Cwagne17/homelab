@@ -76,7 +76,7 @@ variable "network_bridge" {
 
 variable "lxc_template" {
   type        = string
-  description = "LXC template to use (e.g., local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst)"
+  description = "LXC template to use (e.g., 'local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst')"
   default     = "local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
 }
 
@@ -138,8 +138,13 @@ variable "lxc_ssh_public_key" {
 
 variable "lxc_ip" {
   type        = string
-  description = "Static IP address with CIDR for the LXC (e.g., 10.0.10.10/24) or 'dhcp'"
+  description = "Static IP address with CIDR for the LXC (e.g., '10.0.10.10/24') or 'dhcp'"
   default     = "dhcp"
+
+  validation {
+    condition     = var.lxc_ip == "dhcp" || can(cidrhost(var.lxc_ip, 0))
+    error_message = "lxc_ip must be 'dhcp' or a valid IP address in CIDR notation (e.g., '10.0.10.10/24')."
+  }
 }
 
 variable "lxc_gateway" {

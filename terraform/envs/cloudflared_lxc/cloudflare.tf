@@ -80,7 +80,7 @@ resource "cloudflare_record" "tunnel_dns" {
   type    = "CNAME"
   content = "${cloudflare_zero_trust_tunnel_cloudflared.cloudflared.id}.cfargotunnel.com"
   proxied = true
-  ttl     = 1 # Auto TTL when proxied
+  ttl     = 1 # TTL=1 means automatic TTL management by Cloudflare (required when proxied=true)
 
   comment = "Managed by Terraform - cloudflared tunnel"
 }

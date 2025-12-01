@@ -27,6 +27,8 @@ locals {
   })
 
   # Installation script for cloudflared
+  # Note: This script is for documentation purposes. The actual provisioning
+  # is done through pct exec commands or SSH after LXC creation.
   cloudflared_install_script = <<-EOT
     #!/bin/bash
     set -e
@@ -34,13 +36,15 @@ locals {
     # Update package lists
     apt-get update
 
-    # Install required packages
-    apt-get install -y curl gnupg2 apt-transport-https
+    # Install required packages (including lsb-release for OS detection)
+    apt-get install -y curl gnupg2 apt-transport-https lsb-release
 
     # Add Cloudflare GPG key and repository
+    # Using 'bookworm' as the default for Debian 12, or detect dynamically
     mkdir -p /usr/share/keyrings
     curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/cloudflared.list
+    CODENAME=$(lsb_release -cs 2>/dev/null || echo "bookworm")
+    echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $CODENAME main" | tee /etc/apt/sources.list.d/cloudflared.list
 
     # Install cloudflared
     apt-get update
