@@ -60,7 +60,8 @@ source "proxmox-iso" "alma9-k3s" {
   }
 
   # QEMU Guest Agent (Req 9.2)
-  qemu_agent = true
+  # Disabled temporarily - will enable after agent is installed via provisioner
+  qemu_agent = false
 
   # CPU and Memory
   cores    = var.vm_cores
@@ -109,9 +110,6 @@ source "proxmox-iso" "alma9-k3s" {
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
   ssh_timeout  = var.ssh_timeout
-  
-  # SSH host detection - use cloud-init instead of agent (since agent not installed yet)
-  ssh_host_source = "cloud-init"
 
   # Template conversion (Req 9.3)
   template_name        = var.image_version
