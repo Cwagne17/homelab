@@ -10,7 +10,7 @@ Cloudflare Access provides Zero Trust Network Access (ZTNA) with identity-based 
 
 The ZTNA module supports three security tiers:
 
-### Tier 1: Super Strict (Admin-Only, WARP Required)
+### Tier 1: Super Strict (Admin-Only, GitHub Login Required)
 
 **Use for:**
 
@@ -21,12 +21,11 @@ The ZTNA module supports three security tiers:
 
 **Requirements:**
 
-- ✅ Identity verification (email/IdP)
-- ✅ Device enrolled in your organization
-- ✅ WARP client active at request time
-- ✅ Optional: Country restriction, OS verification
+- ✅ Identity verification (email)
+- ✅ Login via GitHub (or other configured IdP)
+- ✅ Optional: Country restriction, IP range restriction
 
-**Result:** Even if someone steals the URL, they need your identity, an enrolled device, and WARP active.
+**Result:** Even if someone steals the URL, they need your email and GitHub login access.
 
 ### Tier 2: Strong But Usable (Phones, Tablets)
 
@@ -39,11 +38,11 @@ The ZTNA module supports three security tiers:
 
 **Requirements:**
 
-- ✅ Identity verification (email/IdP)
+- ✅ Identity verification (email)
 - ✅ Country or IP range restriction
-- ❌ No WARP required (works on mobile browsers)
+- ✅ Works on any device with browser
 
-**Result:** Still requires authentication, but accessible from any device.
+**Result:** Still requires authentication, accessible from any device.
 
 ### Tier 3: Consumer Apps (TVs, Streaming)
 
@@ -55,7 +54,7 @@ The ZTNA module supports three security tiers:
 
 **Protection:**
 
-- ❌ No Cloudflare Access (TVs can't do SSO/WARP)
+- ❌ No Cloudflare Access (TVs can't do SSO)
 - ✅ Application-level authentication (Jellyfin users)
 - ✅ Cloudflare WAF rules
 - ✅ Rate limiting
@@ -63,35 +62,20 @@ The ZTNA module supports three security tiers:
 
 ## Configuration Examples
 
-### Tier 1: Proxmox (Admin with WARP)
+### Tier 1: Proxmox (Admin with GitHub)
 
 ```terraform
 access_applications = {
   proxmox = {
     session_duration = "24h"
-    policies = [
-      {
-        name     = "Allow Chris Managed Devices"
-        decision = "allow"
-        priority = 1
-        include = {
-          emails = ["chris@example.com"]
-        }
-        require = {
-          warp_enabled    = true
-          device_enrolled = true
-          countries       = ["US"]
-        }
-      },
-      {
-        name     = "Default Deny"
-        decision = "deny"
-        priority = 100
-        include = {
-          everyone = true
-        }
-      }
-    ]
+    policy_name      = "Allow Chris via GitHub"
+    include = {
+      emails = ["chris@example.com"]
+    }
+    require = {
+      login_methods = ["github"]
+      countries     = ["US"]
+    }
   }
 }
 ```
@@ -102,64 +86,13 @@ access_applications = {
 access_applications = {
   grafana = {
     session_duration = "24h"
-    policies = [
-      {
-        name     = "Allow Chris Any Device"
-        decision = "allow"
-        priority = 1
-        include = {
-          emails = ["chris@example.com"]
-        }
-        require = {
-          countries = ["US"]
-        }
-      }
-    ]
-  }
-}
-```
-
-### Mixed Tier: Grafana with Split Policies
-
-Allow WARP-enrolled devices OR mobile devices from specific countries:
-
-```terraform
-access_applications = {
-  grafana = {
-    session_duration = "24h"
-    policies = [
-      {
-        name     = "Allow Managed Devices"
-        decision = "allow"
-        priority = 1
-        include = {
-          emails = ["chris@example.com"]
-        }
-        require = {
-          warp_enabled    = true
-          device_enrolled = true
-        }
-      },
-      {
-        name     = "Allow Mobile Devices from US"
-        decision = "allow"
-        priority = 2
-        include = {
-          emails = ["chris@example.com"]
-        }
-        require = {
-          countries = ["US"]
-        }
-      },
-      {
-        name     = "Default Deny"
-        decision = "deny"
-        priority = 100
-        include = {
-          everyone = true
-        }
-      }
-    ]
+    policy_name      = "Allow Chris Any Device"
+    include = {
+      emails = ["chris@example.com"]
+    }
+    require = {
+      countries = ["US"]
+    }
   }
 }
 ```
@@ -168,50 +101,40 @@ access_applications = {
 
 ```terraform
 access_applications = {
-  # Tier 1: Admin services
+  # Tier 1: Admin services with GitHub login
   proxmox = {
     session_duration = "24h"
-    policies = [{
-      name     = "Allow Managed Devices"
-      decision = "allow"
-      include = {
-        emails = ["chris@example.com"]
-      }
-      require = {
-        warp_enabled    = true
-        device_enrolled = true
-      }
-    }]
+    policy_name      = "Allow via GitHub"
+    include = {
+      emails = ["chris@example.com"]
+    }
+    require = {
+      login_methods = ["github"]
+      countries     = ["US"]
+    }
   }
 
   argocd = {
     session_duration = "12h"
-    policies = [{
-      name     = "Allow Managed Devices"
-      decision = "allow"
-      include = {
-        emails = ["chris@example.com"]
-      }
-      require = {
-        warp_enabled    = true
-        device_enrolled = true
-      }
-    }]
+    policy_name      = "Allow via GitHub"
+    include = {
+      emails = ["chris@example.com"]
+    }
+    require = {
+      login_methods = ["github"]
+    }
   }
 
-  # Tier 2: Monitoring accessible from mobile
+  # Tier 2: Monitoring accessible from any device
   grafana = {
     session_duration = "24h"
-    policies = [{
-      name     = "Allow Any Device"
-      decision = "allow"
-      include = {
-        emails = ["chris@example.com"]
-      }
-      require = {
-        countries = ["US"]
-      }
-    }]
+    policy_name      = "Allow Any Device"
+    include = {
+      emails = ["chris@example.com"]
+    }
+    require = {
+      countries = ["US"]
+    }
   }
 }
 ```
@@ -224,11 +147,7 @@ At least one `include` condition must match for the policy to apply:
 
 ```terraform
 include = {
-  emails    = ["user@example.com"]         # Email addresses
-  groups    = ["group-id-123"]             # Access group IDs
-  everyone  = true                         # Everyone (use for deny policies)
-  ip_ranges = ["10.0.0.0/8"]              # IP CIDR ranges
-  countries = ["US", "CA"]                 # Country codes (ISO 3166-1)
+  emails = ["user@example.com"]  # Email addresses (required)
 }
 ```
 
@@ -238,11 +157,9 @@ All `require` conditions must match (AND logic):
 
 ```terraform
 require = {
-  warp_enabled        = true                # WARP client must be active
-  device_enrolled     = true                # Device must be enrolled in org
-  countries           = ["US"]              # Must be from these countries
-  ip_ranges           = ["10.0.0.0/8"]     # Must be from these IP ranges
-  certificate_present = true                # mTLS certificate required
+  login_methods = ["github"]         # Login via GitHub (or other IdP)
+  countries     = ["US"]             # Must be from these countries
+  ip_ranges     = ["10.0.0.0/8"]    # Must be from these IP ranges
 }
 ```
 
@@ -252,46 +169,32 @@ None of the `exclude` conditions can match:
 
 ```terraform
 exclude = {
-  emails    = ["blocked@example.com"]     # Block specific emails
-  groups    = ["blocked-group-id"]        # Block specific groups
-  countries = ["CN", "RU"]                # Block specific countries
-  ip_ranges = ["192.0.2.0/24"]           # Block specific IP ranges
+  emails    = ["blocked@example.com"]  # Block specific emails
+  countries = ["CN", "RU"]             # Block specific countries
+  ip_ranges = ["192.0.2.0/24"]        # Block specific IP ranges
 }
 ```
 
-## Device Posture with WARP
+## Login Methods Setup
 
-### Setting Up WARP
+### Configuring GitHub as Identity Provider
 
 1. **Create a Zero Trust Organization:**
 
    - Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
    - Settings → General → Create your organization name
 
-2. **Enroll Your Device:**
+2. **Add GitHub as Identity Provider:**
 
-   - Install WARP client: https://1.1.1.1/
-   - Open WARP → Settings → Preferences → Account
-   - Login with your organization name
-   - Authenticate with your email
+   - Settings → Authentication → Login methods
+   - Click "Add new" → Select "GitHub"
+   - Follow the OAuth setup instructions
+   - Configure authorized domains and user groups as needed
 
-3. **Verify Enrollment:**
-   - WARP should show "Connected"
-   - Zero Trust Dashboard → My Team → Devices should list your device
-
-### Device Posture Checks
-
-Beyond WARP, you can add additional posture checks:
-
-- **Operating System:** Require specific OS (macOS, Windows, Linux)
-- **OS Version:** Minimum OS version
-- **Disk Encryption:** Require FileVault/BitLocker
-- **Firewall Enabled:** Require OS firewall active
-- **Application Installed:** Require specific apps
-- **Serial Number:** Whitelist specific devices
-- **Domain Joined:** Require AD/AAD domain membership
-
-Configure in: Zero Trust Dashboard → Settings → WARP Client → Device posture
+3. **Test Authentication:**
+   - Try accessing a protected service
+   - Should redirect to GitHub for authentication
+   - After GitHub login, should be granted access based on policies
 
 ## Security Best Practices
 
@@ -337,12 +240,12 @@ Choose appropriate session durations:
 
 ### 5. Country Restrictions
 
-Use country restrictions even with WARP:
+Use country restrictions with login methods:
 
 ```terraform
 require = {
-  warp_enabled = true
-  countries    = ["US", "CA"]  # Your expected locations
+  login_methods = ["github"]
+  countries     = ["US", "CA"]  # Your expected locations
 }
 ```
 
@@ -352,20 +255,20 @@ This adds another layer if credentials are compromised.
 
 ### Test with Different Conditions
 
-1. **Test without WARP:**
+1. **Test without Authentication:**
 
-   - Disconnect WARP client
+   - Open incognito window
    - Try accessing the service
-   - Should be denied if WARP is required
+   - Should redirect to GitHub login
 
 2. **Test from Different Countries:**
 
    - Use VPN to appear from different country
    - Should be denied if country restrictions apply
 
-3. **Test with Incognito:**
-   - Open incognito window
-   - Should require full authentication flow
+3. **Test with Different Email:**
+   - Use different GitHub account
+   - Should be denied if email not in allowed list
 
 ### View Access Logs
 
@@ -382,19 +285,16 @@ Monitor access attempts:
 
 ### "Access Denied" When I Should Have Access
 
-1. **Check WARP Status:**
+1. **Verify Email Matches:**
 
-   ```bash
-   # macOS/Linux
-   warp-cli status
+   - Email in policy must exactly match your GitHub email
+   - Check for typos in the policy configuration
 
-   # Should show: "Connected"
-   ```
+2. **Check GitHub Authentication:**
 
-2. **Verify Email Matches:**
-
-   - Email in policy must exactly match your IdP email
-   - Check for typos
+   - Ensure you're logged into the correct GitHub account
+   - Verify the GitHub OAuth app is authorized
+   - Check that your GitHub email is verified
 
 3. **Check Country Detection:**
 
@@ -407,42 +307,27 @@ Monitor access attempts:
    - Find your attempt
    - Check which policy matched and why
 
-### WARP Not Connecting
+### GitHub Login Not Working
 
-```bash
-# Reset WARP
-warp-cli disconnect
-warp-cli connect
-
-# Check registration
-warp-cli registration show
-
-# Re-register if needed
-warp-cli registration delete
-warp-cli registration new
-```
-
-### Device Not Showing in Dashboard
-
-- Wait 5-10 minutes after enrollment
-- Disconnect and reconnect WARP
-- Check organization name is correct
-- Verify email authentication succeeded
+- Verify GitHub is configured as identity provider in Cloudflare
+- Check OAuth app settings in GitHub
+- Ensure redirect URLs are correctly configured
+- Try re-authorizing the OAuth app
 
 ## Policy Decision Matrix
 
 Reference table for choosing the right tier:
 
-| Service Type         | Access? | WARP?    | Example                  |
-| -------------------- | ------- | -------- | ------------------------ |
-| Infrastructure Admin | ✅ Yes  | ✅ Yes   | Proxmox, ArgoCD, Rancher |
-| Monitoring (Admin)   | ✅ Yes  | ✅ Yes   | Grafana, Prometheus      |
-| Monitoring (View)    | ✅ Yes  | ❌ No    | Grafana (mobile)         |
-| Development Tools    | ✅ Yes  | Optional | GitLab, Gitea            |
-| Documentation        | ✅ Yes  | ❌ No    | Wiki, Docs               |
-| Media (Personal)     | ❌ No   | ❌ No    | Jellyfin, Plex           |
-| Media (Shared)       | ❌ No   | ❌ No    | Jellyfin for family      |
-| IoT/Smart Home       | ❌ No   | ❌ No    | Home Assistant           |
+| Service Type         | Access? | GitHub Login? | Example                  |
+| -------------------- | ------- | ------------- | ------------------------ |
+| Infrastructure Admin | ✅ Yes  | ✅ Yes        | Proxmox, ArgoCD, Rancher |
+| Monitoring (Admin)   | ✅ Yes  | ✅ Yes        | Grafana, Prometheus      |
+| Monitoring (View)    | ✅ Yes  | ❌ No         | Grafana (mobile)         |
+| Development Tools    | ✅ Yes  | Optional      | GitLab, Gitea            |
+| Documentation        | ✅ Yes  | ❌ No         | Wiki, Docs               |
+| Media (Personal)     | ❌ No   | ❌ No         | Jellyfin, Plex           |
+| Media (Shared)       | ❌ No   | ❌ No         | Jellyfin for family      |
+| IoT/Smart Home       | ❌ No   | ❌ No         | Home Assistant           |
 
 ## Next Steps
 

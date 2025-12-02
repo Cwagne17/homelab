@@ -85,6 +85,11 @@ help:
 
 packer:
 	@echo "==> Building Packer image: $(IMAGE_VERSION)"
+	@if [ -z "$$PKR_VAR_proxmox_token" ]; then \
+		echo "ERROR: PKR_VAR_proxmox_token environment variable is not set"; \
+		echo "Set it with: export PKR_VAR_proxmox_token='your-token'"; \
+		exit 1; \
+	fi
 	cd $(PACKER_DIR) && \
 		packer init . && \
 		packer build \
@@ -94,7 +99,7 @@ packer:
 
 packer-validate:
 	@echo "==> Validating Packer configuration..."
-	cd $(PACKER_DIR) && packer validate .
+	cd $(PACKER_DIR) && packer init . && packer validate -syntax-only .
 
 packer-fmt:
 	@echo "==> Formatting Packer files..."

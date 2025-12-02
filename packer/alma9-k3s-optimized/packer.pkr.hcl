@@ -40,11 +40,13 @@ source "proxmox-iso" "alma9-k3s" {
   vm_id   = var.vm_id
   vm_name = var.image_version
 
-  # ISO Configuration
-  iso_url          = var.alma_iso_url
-  iso_checksum     = var.alma_iso_checksum
-  iso_storage_pool = var.alma_iso_storage_pool
-  unmount_iso      = true
+  # ISO Configuration using boot_iso block (new syntax)
+  boot_iso {
+    type         = "scsi"
+    iso_file     = var.alma_iso_url
+    unmount      = true
+    iso_checksum = var.alma_iso_checksum
+  }
 
   # UEFI and Machine Type (Req 1.1, 9.2)
   bios    = "ovmf"
@@ -95,18 +97,19 @@ source "proxmox-iso" "alma9-k3s" {
   boot_wait = "5s"
 
   boot_command = [
-    "<up>",
-    "e",
-    "<down><down><end>",
-    " inst.text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg",
+    "<up><wait>",
+    "e<wait>",
+    "<down><down><end><wait>",
+    "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
+    "inst.text inst.stage2=cdrom inst.ks=https://raw.githubusercontent.com/Cwagne17/homelab/refs/heads/main/packer/alma9-k3s-optimized/http/ks.cfg<wait>",
     "<leftCtrlOn>x<leftCtrlOff>"
   ]
 
-  # HTTP server for kickstart delivery (Req 9.5)
-  http_directory    = "${path.root}/http"
-  http_bind_address = var.http_bind_address
-  http_port_min     = var.http_port_min
-  http_port_max     = var.http_port_max
+  # HTTP server disabled - using GitHub raw URL instead
+  # http_directory    = "${path.root}/http"
+  # http_bind_address = var.http_bind_address
+  # http_port_min     = var.http_port_min
+  # http_port_max     = var.http_port_max
 
   # SSH connection for provisioning
   ssh_username = var.ssh_username
@@ -126,54 +129,55 @@ build {
   name    = "alma9-k3s-optimized"
   sources = ["source.proxmox-iso.alma9-k3s"]
 
-  # Provisioning scripts run in order (Req 1.3)
+  # Provisioning scripts disabled for initial testing
+  # Will add back one by one once basic build works
 
-  # 1. System updates and base configuration
-  provisioner "shell" {
-    script          = "${path.root}/scripts/os-update.sh"
-    execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  }
+  # # 1. System updates and base configuration
+  # provisioner "shell" {
+  #   script          = "${path.root}/scripts/os-update.sh"
+  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
+  # }
 
-  # 2. QEMU guest agent installation
-  provisioner "shell" {
-    script          = "${path.root}/scripts/guest-agent.sh"
-    execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  }
+  # # 2. QEMU guest agent installation
+  # provisioner "shell" {
+  #   script          = "${path.root}/scripts/guest-agent.sh"
+  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
+  # }
 
-  # 3. k3s server installation
-  provisioner "shell" {
-    script = "${path.root}/scripts/k3s-install.sh"
-    environment_vars = [
-      "K3S_VERSION=${var.k3s_version}"
-    ]
-    execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  }
+  # # 3. k3s server installation
+  # provisioner "shell" {
+  #   script = "${path.root}/scripts/k3s-install.sh"
+  #   environment_vars = [
+  #     "K3S_VERSION=${var.k3s_version}"
+  #   ]
+  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
+  # }
 
-  # 4. Security hardening (stub)
-  provisioner "shell" {
-    script          = "${path.root}/scripts/hardening-oscap.sh"
-    execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  }
+  # # 4. Security hardening (stub)
+  # provisioner "shell" {
+  #   script          = "${path.root}/scripts/hardening-oscap.sh"
+  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
+  # }
 
-  # 5. Cleanup for template
-  provisioner "shell" {
-    inline = [
-      "# Clean up temporary files",
-      "rm -rf /tmp/*",
-      "rm -rf /var/tmp/*",
-      "rm -f /etc/machine-id",
-      "truncate -s 0 /etc/machine-id",
-      "rm -f /var/log/*.log",
-      "rm -f /var/log/**/*.log",
-      "# Cloud-init cleanup for cloning",
-      "cloud-init clean --logs",
-      "# Zero out free space for compression",
-      "sync",
-      "# Ensure cloud-init runs on next boot",
-      "rm -rf /var/lib/cloud/instances/*"
-    ]
-    execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  }
+  # # 5. Cleanup for template
+  # provisioner "shell" {
+  #   inline = [
+  #     "# Clean up temporary files",
+  #     "rm -rf /tmp/*",
+  #     "rm -rf /var/tmp/*",
+  #     "rm -f /etc/machine-id",
+  #     "truncate -s 0 /etc/machine-id",
+  #     "rm -f /var/log/*.log",
+  #     "rm -f /var/log/**/*.log",
+  #     "# Cloud-init cleanup for cloning",
+  #     "cloud-init clean --logs",
+  #     "# Zero out free space for compression",
+  #     "sync",
+  #     "# Ensure cloud-init runs on next boot",
+  #     "rm -rf /var/lib/cloud/instances/*"
+  #   ]
+  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
+  # }
 
   # Output template name for reference (Req 9.4)
   post-processor "manifest" {

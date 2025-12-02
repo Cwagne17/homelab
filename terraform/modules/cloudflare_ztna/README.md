@@ -4,12 +4,12 @@ Terraform/OpenTofu module for managing Cloudflare Zero Trust Network Access with
 
 ## Features
 
-- 🔒 **Zero Trust Access** - Identity-based authentication with device posture
+- 🔒 **Zero Trust Access** - Identity-based authentication with login methods
 - 🌐 **Cloudflare Tunnel** - Secure outbound-only connections (no exposed ports)
-- 🎯 **Tiered Policies** - Flexible security levels (strict WARP-required to mobile-friendly)
+- 🎯 **Tiered Policies** - Flexible security levels (strict IdP-required to country-restricted)
 - 🔄 **Dynamic Configuration** - Manage multiple services with ingress rules
 - 📝 **DNS Automation** - Automatic CNAME record creation
-- 🛡️ **Device Posture** - WARP client and device enrollment checks
+- 🔑 **Login Methods** - GitHub, Google, and other identity provider support
 
 ## Usage
 
@@ -32,9 +32,9 @@ module "cloudflare_ztna" {
 }
 ```
 
-### Tier 1: Admin with WARP (Most Secure)
+### Tier 1: Admin with GitHub (Most Secure)
 
-Require WARP client and device enrollment:
+Require GitHub login:
 
 ```terraform
 module "cloudflare_ztna" {
@@ -51,29 +51,14 @@ module "cloudflare_ztna" {
   access_applications = {
     proxmox = {
       session_duration = "24h"
-      policies = [
-        {
-          name     = "Allow Managed Devices"
-          decision = "allow"
-          priority = 1
-          include = {
-            emails = ["admin@example.com"]
-          }
-          require = {
-            warp_enabled    = true
-            device_enrolled = true
-            countries       = ["US"]
-          }
-        },
-        {
-          name     = "Default Deny"
-          decision = "deny"
-          priority = 100
-          include = {
-            everyone = true
-          }
-        }
-      ]
+      policy_name      = "Allow via GitHub"
+      include = {
+        emails = ["admin@example.com"]
+      }
+      require = {
+        login_methods = ["github"]
+        countries     = ["US"]
+      }
     }
   }
 }
@@ -98,54 +83,14 @@ module "cloudflare_ztna" {
   access_applications = {
     grafana = {
       session_duration = "24h"
-      policies = [{
-        name     = "Allow From US"
-        decision = "allow"
-        include = {
-          emails = ["admin@example.com"]
-        }
-        require = {
-          countries = ["US"]
-        }
-      }]
-    }
-  }
-}
-```
-
-### Mixed Tier: Split Policies
-
-Different policies for different device types:
-
-```terraform
-access_applications = {
-  grafana = {
-    session_duration = "24h"
-    policies = [
-      {
-        name     = "Allow Managed Devices"
-        decision = "allow"
-        priority = 1
-        include = {
-          emails = ["admin@example.com"]
-        }
-        require = {
-          warp_enabled    = true
-          device_enrolled = true
-        }
-      },
-      {
-        name     = "Allow Mobile from US"
-        decision = "allow"
-        priority = 2
-        include = {
-          emails = ["admin@example.com"]
-        }
-        require = {
-          countries = ["US"]
-        }
+      policy_name      = "Allow From US"
+      include = {
+        emails = ["admin@example.com"]
       }
-    ]
+      require = {
+        countries = ["US"]
+      }
+    }
   }
 }
 ```
@@ -172,34 +117,23 @@ access_applications = {
 ```terraform
 {
   session_duration = string  # "24h", "12h", "168h" (7 days)
-  policies = list(object({
-    name     = string        # Policy name
-    decision = string        # "allow" or "deny"
-    priority = number        # Lower = higher priority (optional)
+  policy_name      = string  # Policy name (optional, default: "Allow Access")
 
-    include = object({
-      emails    = list(string)  # Email addresses
-      groups    = list(string)  # Access group IDs
-      everyone  = bool          # true for deny-all policies
-      ip_ranges = list(string)  # CIDR ranges
-      countries = list(string)  # ISO 3166-1 country codes
-    })
+  include = object({
+    emails = list(string)  # Email addresses (required)
+  })
 
-    require = object({       # All conditions must match
-      warp_enabled        = bool          # WARP client active
-      device_enrolled     = bool          # Device enrolled in org
-      countries           = list(string)  # Country codes
-      ip_ranges           = list(string)  # CIDR ranges
-      certificate_present = bool          # mTLS cert required
-    })
+  require = object({       # All conditions must match (optional)
+    login_methods = list(string)  # Login methods: "github", "google", etc.
+    countries     = list(string)  # ISO 3166-1 country codes
+    ip_ranges     = list(string)  # CIDR ranges
+  })
 
-    exclude = object({       # None can match
-      emails    = list(string)
-      groups    = list(string)
-      countries = list(string)
-      ip_ranges = list(string)
-    })
-  }))
+  exclude = object({       # None can match (optional)
+    emails    = list(string)
+    countries = list(string)
+    ip_ranges = list(string)
+  })
 }
 ```
 
@@ -220,46 +154,38 @@ access_applications = {
 
 At least one condition must match:
 
-- `emails` - List of email addresses
-- `groups` - List of Access group IDs
-- `everyone` - Match everyone (use for deny policies)
-- `ip_ranges` - List of IP CIDR ranges
-- `countries` - List of ISO 3166-1 country codes
+- `emails` - List of email addresses (required)
 
 ### Require Rules (AND Logic)
 
 All conditions must match:
 
-- `warp_enabled` - WARP client must be active
-- `device_enrolled` - Device must be enrolled in organization
-- `countries` - Must be from these countries
-- `ip_ranges` - Must be from these IP ranges
-- `certificate_present` - mTLS certificate required
+- `login_methods` - List of login methods (e.g., "github", "google")
+- `countries` - Must be from these countries (ISO 3166-1 codes)
+- `ip_ranges` - Must be from these IP ranges (CIDR notation)
 
 ### Exclude Rules (NOT Logic)
 
 None of these can match:
 
 - `emails` - Block specific emails
-- `groups` - Block specific groups
-- `countries` - Block specific countries
-- `ip_ranges` - Block specific IP ranges
+- `countries` - Block specific countries (ISO 3166-1 codes)
+- `ip_ranges` - Block specific IP ranges (CIDR notation)
 
 ## Security Tiers
 
-### Tier 1: Admin Services (WARP Required)
+### Tier 1: Admin Services (GitHub Required)
 
 **Use for:** Proxmox, Kubernetes, infrastructure
 
 ```terraform
 require = {
-  warp_enabled    = true
-  device_enrolled = true
-  countries       = ["US"]
+  login_methods = ["github"]
+  countries     = ["US"]
 }
 ```
 
-### Tier 2: Flexible Access (No WARP)
+### Tier 2: Flexible Access (Country Restricted)
 
 **Use for:** Grafana (mobile), documentation, development tools
 
@@ -276,29 +202,27 @@ require = {
 - Don't add to `access_applications`
 - Protect with application-level auth + WAF
 
-## Device Posture Setup
+## Login Methods Setup
 
 ### 1. Create Zero Trust Organization
 
 1. Go to [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/)
 2. Settings → General → Create organization
 
-### 2. Install WARP Client
+### 2. Configure GitHub Identity Provider
 
-Download from: https://1.1.1.1/
+1. Settings → Authentication → Login methods
+2. Click "Add new" → Select "GitHub"
+3. Follow OAuth setup instructions:
+   - Create OAuth app in GitHub
+   - Configure redirect URLs
+   - Add Client ID and Secret to Cloudflare
 
-### 3. Enroll Device
+### 3. Test Authentication
 
-1. Open WARP → Settings → Preferences → Account
-2. Login with organization name
-3. Authenticate with email
-
-### 4. Verify
-
-```bash
-warp-cli status
-# Should show: Connected
-```
+1. Access a protected service
+2. Should redirect to GitHub login
+3. After successful login, access should be granted
 
 ## Running the Connector
 

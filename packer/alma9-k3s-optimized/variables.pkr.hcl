@@ -21,7 +21,7 @@ variable "image_version" {
 
   validation {
     condition     = can(regex("^alma[0-9]+-k3-node-(amd64|arm64)-v[0-9]+\\.[0-9]+\\.[0-9]+-v[0-9]+$", var.image_version))
-    error_message = "Image version must match format: alma{version}-k3-node-{arch}-{k3s-version}-v{distribution-release}"
+    error_message = "Image version must match format: alma{version}-k3-node-{arch}-{k3s-version}-v{distribution-release}."
   }
 }
 
@@ -31,9 +31,9 @@ variable "image_version" {
 
 variable "proxmox_url" {
   type        = string
-  description = "Proxmox API URL (e.g., https://10.23.45.10:8006/api2/json)"
+  description = "Proxmox API URL (e.g., https://proxmox.chriswagner.dev/api2/json)"
   # TODO: Set this to your Proxmox API URL
-  default = "https://proxmox.example.com:8006/api2/json"
+  default = "https://proxmox.chriswagner.dev/api2/json"
 }
 
 variable "proxmox_username" {
@@ -102,7 +102,7 @@ variable "k3s_version" {
 
   validation {
     condition     = can(regex("^v[0-9]+\\.[0-9]+\\.[0-9]+\\+k3s[0-9]+$", var.k3s_version))
-    error_message = "k3s version must match format: v{major}.{minor}.{patch}+k3s{release}"
+    error_message = "K3s version must match format: v{major}.{minor}.{patch}+k3s{release}."
   }
 }
 

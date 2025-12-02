@@ -31,6 +31,23 @@ sequenceDiagram
     P->>P: Output manifest.json
 ```
 
+## Network Requirements
+
+⚠️ **IMPORTANT**: Packer builds must be executed from inside your network with direct access to the Proxmox server's internal IP address.
+
+The public Proxmox endpoint (`https://proxmox.chriswagner.dev`) is protected by Cloudflare Access with security policies (GitHub login required, country restrictions, etc.) that will block API token authentication. Packer cannot authenticate through these access controls.
+
+**Run builds from:**
+
+- A machine on the same network as Proxmox
+- Via VPN connection to your homelab network
+- From a bastion/jump host inside the network
+
+**Configuration:**
+
+- ✅ Use internal IP: `https://10.23.45.10:8006/api2/json`
+- ❌ Do NOT use: `https://proxmox.chriswagner.dev/api2/json`
+
 ## Quick Start
 
 ### 1. Initialize Packer
@@ -87,26 +104,26 @@ make packer IMAGE_VERSION=alma9-k3-node-amd64-v1.28.5-v1
 
 The build runs these provisioning scripts in order:
 
-| Stage | Script | Purpose |
-|-------|--------|---------|
-| 1 | `os-update.sh` | System updates, timezone, base packages |
-| 2 | `guest-agent.sh` | Install QEMU guest agent |
-| 3 | `k3s-install.sh` | Install k3s server, disable Traefik |
-| 4 | `hardening-oscap.sh` | Security hardening (stub) |
-| 5 | Cleanup | Clear logs, machine-id for cloning |
+| Stage | Script               | Purpose                                 |
+| ----- | -------------------- | --------------------------------------- |
+| 1     | `os-update.sh`       | System updates, timezone, base packages |
+| 2     | `guest-agent.sh`     | Install QEMU guest agent                |
+| 3     | `k3s-install.sh`     | Install k3s server, disable Traefik     |
+| 4     | `hardening-oscap.sh` | Security hardening (stub)               |
+| 5     | Cleanup              | Clear logs, machine-id for cloning      |
 
 ## Hardware Configuration
 
 The builder VM uses these defaults:
 
-| Setting | Value | Configurable |
-|---------|-------|--------------|
-| BIOS | OVMF (UEFI) | No |
-| Machine | q35 | No |
-| CPU | 2 cores (host) | `vm_cores` |
-| Memory | 4096 MB | `vm_memory` |
-| Disk | 32G SCSI | `vm_disk_size` |
-| Network | virtio | `vm_bridge` |
+| Setting | Value          | Configurable   |
+| ------- | -------------- | -------------- |
+| BIOS    | OVMF (UEFI)    | No             |
+| Machine | q35            | No             |
+| CPU     | 2 cores (host) | `vm_cores`     |
+| Memory  | 4096 MB        | `vm_memory`    |
+| Disk    | 32G SCSI       | `vm_disk_size` |
+| Network | virtio         | `vm_bridge`    |
 
 ## Output
 
