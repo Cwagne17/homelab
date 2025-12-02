@@ -105,16 +105,13 @@ source "proxmox-iso" "alma9-k3s" {
     "<leftCtrlOn>x<leftCtrlOff>"
   ]
 
-  # HTTP server disabled - using GitHub raw URL instead
-  # http_directory    = "${path.root}/http"
-  # http_bind_address = var.http_bind_address
-  # http_port_min     = var.http_port_min
-  # http_port_max     = var.http_port_max
-
   # SSH connection for provisioning
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
   ssh_timeout  = var.ssh_timeout
+  
+  # SSH host detection - use cloud-init instead of agent (since agent not installed yet)
+  ssh_host_source = "cloud-init"
 
   # Template conversion (Req 9.3)
   template_name        = var.image_version
