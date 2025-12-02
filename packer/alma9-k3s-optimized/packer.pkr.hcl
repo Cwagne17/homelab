@@ -102,7 +102,7 @@ source "proxmox-iso" "alma9-k3s" {
     "e<wait>",
     "<down><down><end><wait>",
     "<bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs><bs>",
-    "inst.text inst.stage2=cdrom inst.ks=https://raw.githubusercontent.com/Cwagne17/homelab/refs/heads/main/packer/alma9-k3s-optimized/http/ks.cfg<wait>",
+    "inst.text inst.stage2=cdrom inst.ks=https://raw.githubusercontent.com/Cwagne17/homelab/refs/heads/main/packer/alma9-k3s-optimized/http/ks.cfg?t=${timestamp()}<wait>",
     "<leftCtrlOn>x<leftCtrlOff>"
   ]
 
@@ -110,6 +110,7 @@ source "proxmox-iso" "alma9-k3s" {
   ssh_username = var.ssh_username
   ssh_password = var.ssh_password
   ssh_timeout  = var.ssh_timeout
+  ssh_host     = "10.23.45.200"  # Static IP set in kickstart
 
   # Template conversion (Req 9.3)
   template_name        = var.image_version
