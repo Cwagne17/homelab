@@ -20,12 +20,11 @@
 # Configuration Variables
 # -----------------------------------------------------------------------------
 
-# Image version for Packer builds
-# Format: alma{version}-k3-node-{arch}-{k3s-version}-v{distribution-release}
-IMAGE_VERSION ?= alma9-k3-node-amd64-v1.28.5-v1
+# AlmaLinux version
+ALMA_VERSION ?= 9.6
 
 # k3s version to install
-K3S_VERSION ?= v1.28.5+k3s1
+K3S_VERSION ?= v1.31.3+k3s1
 
 # Environment for Terraform operations (k3s-single, etc.)
 ENV ?= k3s-single
@@ -47,7 +46,7 @@ help:
 	@echo "Homelab Infrastructure Makefile"
 	@echo ""
 	@echo "Configuration:"
-	@echo "  IMAGE_VERSION = $(IMAGE_VERSION)"
+	@echo "  ALMA_VERSION  = $(ALMA_VERSION)"
 	@echo "  K3S_VERSION   = $(K3S_VERSION)"
 	@echo "  ENV           = $(ENV)"
 	@echo ""
@@ -75,7 +74,7 @@ help:
 	@echo "  docs-clean      - Clean documentation artifacts"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make packer IMAGE_VERSION=alma9-k3-node-amd64-v1.29.0-v1"
+	@echo "  make packer ALMA_VERSION=9.6 K3S_VERSION=v1.31.3+k3s1"
 	@echo "  make tf-apply ENV=k3s-single"
 	@echo "  make k8s-bootstrap"
 
@@ -84,7 +83,7 @@ help:
 # -----------------------------------------------------------------------------
 
 packer:
-	@echo "==> Building Packer image: $(IMAGE_VERSION)"
+	@echo "==> Building Packer image: AlmaLinux $(ALMA_VERSION) + k3s $(K3S_VERSION)"
 	@if [ -z "$$PKR_VAR_proxmox_token" ]; then \
 		echo "ERROR: PKR_VAR_proxmox_token environment variable is not set"; \
 		echo "Set it with: export PKR_VAR_proxmox_token='your-token'"; \
@@ -93,7 +92,7 @@ packer:
 	cd $(PACKER_DIR) && \
 		packer init . && \
 		packer build \
-			-var "image_version=$(IMAGE_VERSION)" \
+			-var "alma_version=$(ALMA_VERSION)" \
 			-var "k3s_version=$(K3S_VERSION)" \
 			.
 

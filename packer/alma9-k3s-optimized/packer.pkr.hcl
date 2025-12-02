@@ -1,19 +1,6 @@
-# =============================================================================
-# Packer Builder Configuration for AlmaLinux 9 + k3s Optimized Image
-#
-# This configuration uses the Proxmox ISO builder to create a k3s-optimized
-# AlmaLinux 9 golden image directly on Proxmox VE.
-#
-# Build Process:
-#   1. Connect to Proxmox API
-#   2. Create temporary VM with AlmaLinux 9 ISO
-#   3. Boot with UEFI firmware and serve kickstart via HTTP
-#   4. Run automated installation
-#   5. Execute provisioning scripts (OS updates, guest agent, k3s)
-#   6. Convert VM to template
-#
-# Refs: Req 1.1, 1.2, 1.4, 1.5, 9.1, 9.2, 9.3, 9.4, 9.5
-# =============================================================================
+locals {
+  template_name = "alma${var.alma_version}-k3s-${replace(var.k3s_version, "+", "-")}-${formatdate("YYYYMMDDhhmm", timestamp())}"
+}
 
 packer {
   required_plugins {
@@ -24,57 +11,49 @@ packer {
   }
 }
 
-# -----------------------------------------------------------------------------
-# Proxmox ISO Builder
-# -----------------------------------------------------------------------------
-
 source "proxmox-iso" "alma9-k3s" {
-  # Proxmox connection
-  proxmox_url              = var.proxmox_url
-  username                 = var.proxmox_username
+  # Proxmox connectivity - Must use internal IP (10.23.45.10) instead of
+  # proxmox.chriswagner.dev because Cloudflare Access blocks API token auth.
+  # insecure_skip_tls_verify=true needed for self-signed certificates.
+  proxmox_url              = "https://10.23.45.10:8006/api2/json"
+  username                 = "packer@pve!packer"
   token                    = var.proxmox_token
-  node                     = var.proxmox_node
-  insecure_skip_tls_verify = var.proxmox_skip_tls_verify
+  node                     = "pve"
+  insecure_skip_tls_verify = true
 
-  # VM Configuration
-  vm_id   = var.vm_id
-  vm_name = var.image_version
+  # VM ID is omitted - Proxmox will auto-assign next available ID
+  vm_name = local.template_name
 
-  # ISO Configuration using boot_iso block (new syntax)
   boot_iso {
     type         = "scsi"
-    iso_file     = var.alma_iso_url
+    iso_file     = var.alma_iso_storage
     unmount      = true
-    iso_checksum = var.alma_iso_checksum
+    iso_checksum = "none"
   }
 
-  # UEFI and Machine Type (Req 1.1, 9.2)
   bios    = "ovmf"
   machine = "q35"
 
-  # EFI disk configuration for UEFI boot
   efi_config {
     efi_storage_pool  = var.vm_storage_pool
     efi_type          = "4m"
     pre_enrolled_keys = false
   }
 
-  # QEMU Guest Agent (Req 9.2)
-  # Disabled temporarily - will enable after agent is installed via provisioner
+  # QEMU guest agent - disabled during build since agent isn't installed yet.
+  # Terraform should set agent=1 when cloning this template.
   qemu_agent = false
 
-  # CPU and Memory
-  cores    = var.vm_cores
+  cores    = 2
   sockets  = 1
-  memory   = var.vm_memory
+  memory   = 4096
   cpu_type = "host"
 
-  # Storage Configuration
   scsi_controller = "virtio-scsi-single"
 
   disks {
     type         = "scsi"
-    disk_size    = var.vm_disk_size
+    disk_size    = "32G"
     storage_pool = var.vm_storage_pool
     format       = "raw"
     io_thread    = true
@@ -82,18 +61,16 @@ source "proxmox-iso" "alma9-k3s" {
     discard      = true
   }
 
-  # Network Configuration
   network_adapters {
     model    = "virtio"
-    bridge   = var.vm_bridge
+    bridge   = "vmbr0"
     firewall = false
   }
 
-  # Cloud-init drive for future VM initialization
+  # Cloud-init drive for VM customization after cloning
   cloud_init              = true
   cloud_init_storage_pool = var.vm_storage_pool
 
-  # Boot configuration for kickstart (Req 9.5)
   boot      = "order=scsi0;ide2"
   boot_wait = "5s"
 
@@ -106,81 +83,32 @@ source "proxmox-iso" "alma9-k3s" {
     "<leftCtrlOn>x<leftCtrlOff>"
   ]
 
-  # SSH connection for provisioning
-  ssh_username = var.ssh_username
-  ssh_password = var.ssh_password
-  ssh_timeout  = var.ssh_timeout
-  ssh_host     = "10.23.45.200"  # Static IP set in kickstart
+  ssh_username = "root"
+  ssh_password = "packer"
+  ssh_timeout  = "30m"
+  # Static IP - must match network --ip in ks.cfg
+  ssh_host     = "10.23.45.200"
 
-  # Template conversion (Req 9.3)
-  template_name        = var.image_version
-  template_description = "AlmaLinux 9 with k3s ${var.k3s_version} pre-installed. Built by Packer on ${timestamp()}"
+  template_name        = local.template_name
+  template_description = "AlmaLinux ${var.alma_version} + k3s ${var.k3s_version}"
+
+  tags = "packer;template;alma${replace(var.alma_version, ".", "_")};k3s_${replace(replace(var.k3s_version, ".", "_"), "+", "_")}"
 }
 
-# -----------------------------------------------------------------------------
-# Build Definition
-# -----------------------------------------------------------------------------
-
 build {
-  name    = "alma9-k3s-optimized"
   sources = ["source.proxmox-iso.alma9-k3s"]
 
-  # Provisioning scripts disabled for initial testing
-  # Will add back one by one once basic build works
+  # Install QEMU guest agent for better Proxmox integration
+  provisioner "shell" {
+    script = "${path.root}/scripts/guest-agent.sh"
+  }
 
-  # # 1. System updates and base configuration
-  # provisioner "shell" {
-  #   script          = "${path.root}/scripts/os-update.sh"
-  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  # }
-
-  # # 2. QEMU guest agent installation
-  # provisioner "shell" {
-  #   script          = "${path.root}/scripts/guest-agent.sh"
-  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  # }
-
-  # # 3. k3s server installation
-  # provisioner "shell" {
-  #   script = "${path.root}/scripts/k3s-install.sh"
-  #   environment_vars = [
-  #     "K3S_VERSION=${var.k3s_version}"
-  #   ]
-  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  # }
-
-  # # 4. Security hardening (stub)
-  # provisioner "shell" {
-  #   script          = "${path.root}/scripts/hardening-oscap.sh"
-  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  # }
-
-  # # 5. Cleanup for template
-  # provisioner "shell" {
-  #   inline = [
-  #     "# Clean up temporary files",
-  #     "rm -rf /tmp/*",
-  #     "rm -rf /var/tmp/*",
-  #     "rm -f /etc/machine-id",
-  #     "truncate -s 0 /etc/machine-id",
-  #     "rm -f /var/log/*.log",
-  #     "rm -f /var/log/**/*.log",
-  #     "# Cloud-init cleanup for cloning",
-  #     "cloud-init clean --logs",
-  #     "# Zero out free space for compression",
-  #     "sync",
-  #     "# Ensure cloud-init runs on next boot",
-  #     "rm -rf /var/lib/cloud/instances/*"
-  #   ]
-  #   execute_command = "chmod +x {{ .Path }}; sudo {{ .Path }}"
-  # }
-
-  # Output template name for reference (Req 9.4)
   post-processor "manifest" {
     output     = "manifest.json"
     strip_path = true
     custom_data = {
-      template_name = var.image_version
+      template_name = local.template_name
+      alma_version  = var.alma_version
       k3s_version   = var.k3s_version
       build_time    = timestamp()
     }
