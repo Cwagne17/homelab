@@ -25,26 +25,61 @@ variable "origins" {
   description = "Map of subdomain -> internal origin URL (e.g. { proxmox = \"https://10.23.45.10:8006\" })"
 }
 
-variable "access_enabled" {
-  type        = bool
-  default     = true
-  description = "Whether to configure Cloudflare Access for selected origins"
-}
+variable "access_applications" {
+  type = map(object({
+    session_duration = optional(string, "24h")
+    policy_name      = optional(string, "Allow Access")
+    
+    # Include conditions (at least one must match)
+    include = object({
+      emails = optional(list(string), [])
+    })
 
-variable "access_apps" {
-  type        = list(string)
-  default     = []
-  description = "List of subdomains from 'origins' that should be protected by Access"
-}
+    # Require conditions (all must match)
+    require = optional(object({
+      login_methods = optional(list(string), [])
+      countries     = optional(list(string), [])
+      ip_ranges     = optional(list(string), [])
+    }), {})
 
-variable "access_emails" {
-  type        = list(string)
-  default     = []
-  description = "Emails allowed to log in to Access-protected apps"
-}
-
-variable "session_duration" {
-  type        = string
-  default     = "24h"
-  description = "Access session duration"
+    # Exclude conditions (none can match)
+    exclude = optional(object({
+      emails    = optional(list(string), [])
+      countries = optional(list(string), [])
+      ip_ranges = optional(list(string), [])
+    }), {})
+  }))
+  default     = {}
+  description = <<-EOT
+    Map of subdomain -> Access application configuration. Each app gets one allow policy,
+    and all apps share a default deny policy.
+    
+    Example - Tier 1 (Admin with GitHub):
+    {
+      proxmox = {
+        session_duration = "24h"
+        policy_name      = "Allow Chris via GitHub"
+        include = {
+          emails = ["chris@example.com"]
+        }
+        require = {
+          login_methods = ["github"]
+        }
+      }
+    }
+    
+    Example - Tier 2 (Flexible, country restricted):
+    {
+      grafana = {
+        session_duration = "24h"
+        policy_name      = "Allow Chris Any Device"
+        include = {
+          emails = ["chris@example.com"]
+        }
+        require = {
+          countries = ["US"]
+        }
+      }
+    }
+  EOT
 }

@@ -22,4 +22,16 @@ output "hostnames" {
   value       = [for k in keys(var.origins) : "${k}.${var.zone_name}"]
 }
 
+output "access_applications" {
+  description = "Map of Access application names to their IDs"
+  value = {
+    for k, v in cloudflare_zero_trust_access_application.app : k => v.id
+  }
+}
 
+output "access_application_urls" {
+  description = "Map of Access application names to their URLs"
+  value = {
+    for k, v in cloudflare_zero_trust_access_application.app : k => "https://${v.domain}"
+  }
+}
