@@ -76,10 +76,30 @@ k3s_version   = "v1.28.5+k3s1"
 image_version = "alma9-k3-node-amd64-v1.28.5-v1"
 ```
 
-### 3. Set Token (sensitive)
+### 3. Set API Token
+
+Create or regenerate the Proxmox API token for Packer authentication.
+
+**Create the packer user token** (in Proxmox shell):
 
 ```bash
-export PKR_VAR_proxmox_token="your-api-token-secret"
+pveum user token add packer@pve packer -privsep 0
+```
+
+**Or regenerate if it already exists:**
+
+```bash
+# Remove the old token
+pveum user token remove packer@pve packer
+
+# Create a new one
+pveum user token add packer@pve packer -privsep 0
+```
+
+Copy the token output and export it as an environment variable:
+
+```bash
+export PKR_VAR_proxmox_token="packer@pve!packer=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
 ### 4. Validate Configuration
@@ -129,18 +149,96 @@ The builder VM uses these defaults:
 
 After a successful build:
 
-1. **Template in Proxmox**: Named per `image_version` variable
+1. **Template in Proxmox**: Named per template_name variable
 2. **Manifest**: `manifest.json` with build metadata
 
 ```json
 {
-  "template_name": "alma9-k3-node-amd64-v1.28.5-v1",
-  "k3s_version": "v1.28.5+k3s1",
-  "build_time": "2024-01-15T10:30:00Z"
+  "builds": [
+    {
+      "name": "proxmox-iso.alma9-k3s",
+      "builder_type": "proxmox-iso",
+      "build_time": 1733508754,
+      "artifact_id": "100",
+      "custom_data": {
+        "template_name": "alma9.6-k3s-stable-202512061712",
+        "alma_version": "9.6",
+        "k3s_channel": "stable",
+        "build_time": "2025-12-06T17:12:34Z"
+      }
+    }
+  ],
+  "last_run_uuid": "d1e4c8a7-b2f3-4c5e-8d9a-1234567890ab"
 }
 ```
 
+### Finding the Latest Template
+
+The manifest file tracks all builds. To identify the latest template:
+
+1. **`last_run_uuid`**: Matches the UUID of the most recent build
+2. **Last in array**: The latest build is always the last element in the `builds` array
+3. **`artifact_id`**: The Proxmox VM ID of the template (use this for Terraform's `clone_id`)
+
+**Extract template ID for Terraform:**
+
+```bash
+# Get the artifact_id (VM ID) of the latest build
+cat manifest.json | jq -r '.builds[-1].artifact_id'
+
+# Get the template name
+cat manifest.json | jq -r '.builds[-1].custom_data.template_name'
+```
+
+**Note**: Terraform requires the **VM ID (artifact_id)** as an integer, not the template name string.
+
 ## Troubleshooting
+
+### Cannot Connect to Proxmox API
+
+**Problem**: Packer fails to connect with authentication errors or timeouts.
+
+**Cause**: The Cloudflare-protected public endpoint blocks API token authentication.
+
+**Solution**: Use the Proxmox server's internal IP address:
+
+```hcl
+proxmox_url = "https://10.23.45.10:8006/api2/json"
+```
+
+**Important**: You must be on the internal network or connected via VPN to access this endpoint.
+
+### TLS Certificate Verification Issues
+
+**Problem**: When using the internal IP, you may encounter TLS certificate errors because the certificate is issued for the domain name (e.g., `proxmox.chriswagner.dev`), not the IP address.
+
+**Solution Options**:
+
+1. **Skip TLS verification** (not recommended for production):
+
+   ```hcl
+   insecure_skip_tls_verify = true
+   ```
+
+2. **Use the domain with correct routing**:
+   - Ensure your VPN or internal DNS resolves the domain to the internal IP
+   - Do NOT modify `/etc/hosts` to map the VPN domain to Proxmox's IP, as this will break VPN connectivity
+
+**Common `/etc/hosts` pitfall**:
+
+```bash
+# ❌ DON'T DO THIS - breaks VPN connection
+10.23.45.10 vpn.example.com
+
+# This causes the VPN domain to resolve to Proxmox instead of the VPN server,
+# preventing you from connecting to the VPN in the first place
+```
+
+**Correct approach**:
+
+- Let the VPN handle DNS resolution naturally
+- Use the internal IP directly with `insecure_skip_tls_verify = true` if needed
+- Or configure internal DNS (Pi-hole, etc.) to resolve the Proxmox domain to its internal IP
 
 ### Build Hangs at Boot
 

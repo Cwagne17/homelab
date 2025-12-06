@@ -83,5 +83,3 @@ build/
 # Python
 venv/*
 site/*
-
-packer/**/manifest.json

@@ -1,0 +1,33 @@
+# =============================================================================
+# Production Overlay
+#
+# This overlay applies production-specific configuration to the base.
+# Apply this to bootstrap the cluster:
+#
+#   kubectl apply -k k8s/overlays/prod
+#
+# This will:
+#   1. Install ArgoCD
+#   2. Deploy the app-of-apps
+#   3. Bootstrap all cluster addons and applications
+#
+# Refs: Req 5.1, 5.2, 5.3
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Reference the ArgoCD base which includes app-of-apps
+  - ../../base/argocd
+
+# Production-specific patches can be added here
+# patches:
+#   - path: patches/argocd-ingress.yaml
+
+# Production labels
+commonLabels:
+  environment: production
+  cluster: home
+
+namespace: argocd

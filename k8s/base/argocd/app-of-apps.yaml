@@ -2,13 +2,7 @@
 # Argo CD App-of-Apps
 #
 # This is the root Application that manages all other applications.
-# It implements the "app-of-apps" pattern for GitOps:
-#   - Points to k8s/clusters/home for cluster configuration
-#   - Automated sync with prune and selfHeal enabled
-#   - Creates namespaces as needed
-#
-# Apply after Argo CD is running:
-#   kubectl apply -f k8s/argo/app-of-apps.yaml
+# It implements the "app-of-apps" pattern for GitOps.
 #
 # Refs: Req 5.2
 # =============================================================================
@@ -27,10 +21,9 @@ spec:
   project: default
 
   source:
-    # TODO: Update with your repository URL
     repoURL: https://github.com/cwagne17/homelab.git
-    targetRevision: HEAD
-    path: k8s/clusters/home
+    targetRevision: main
+    path: k8s/base/apps
 
   destination:
     server: https://kubernetes.default.svc
@@ -38,19 +31,13 @@ spec:
 
   syncPolicy:
     automated:
-      # Automatically delete resources that are no longer in Git
       prune: true
-      # Automatically sync when drift is detected
       selfHeal: true
-      # Don't sync if resources fail validation
       allowEmpty: false
 
     syncOptions:
-      # Create namespaces if they don't exist
       - CreateNamespace=true
-      # Use server-side apply for better compatibility
       - ServerSideApply=true
-      # Apply out of sync resources only
       - ApplyOutOfSyncOnly=true
 
     retry:
@@ -60,5 +47,4 @@ spec:
         factor: 2
         maxDuration: 3m
 
-  # Health checks
   revisionHistoryLimit: 10

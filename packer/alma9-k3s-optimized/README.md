@@ -39,7 +39,7 @@ Or create a token:
 
 ```bash
 # In Proxmox shell
-pveum user token add root@pam packer -privsep 0
+pveum user token add packer@pve packer -privsep 0
 ```
 
 ### 3. Validate Configuration
@@ -71,10 +71,18 @@ The build is configured via `variables.auto.pkrvars.hcl`:
 4. Provisions:
    - OS updates
    - QEMU guest agent
-   - k3s server installation
-   - Security hardening
+   - k3s server installation (from stable channel)
+   - ArgoCD auto-deploy manifest (installed via k3s on first boot)
    - Cleanup for templating
 5. Converts to Proxmox template
+
+## What's Included
+
+- **k3s**: Installed from stable channel with secrets encryption enabled
+- **ArgoCD**: HelmChart manifest at `/var/lib/rancher/k3s/server/manifests/argocd.yaml`
+  - Automatically deployed when k3s starts
+  - No manual installation required
+- **QEMU Guest Agent**: For Proxmox integration
 
 ## Output
 

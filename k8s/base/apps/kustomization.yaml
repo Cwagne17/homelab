@@ -1,0 +1,34 @@
+# =============================================================================
+# Applications Base - ArgoCD Application Definitions
+#
+# This kustomization contains all ArgoCD Application manifests for:
+#   - Cluster addons (cert-manager, istio, keycloak, etc.)
+#   - End-user apps (jellyfin, homeassistant, etc.)
+#
+# Each app is defined as an ArgoCD Application that points to its
+# specific directory containing manifests or helm charts.
+#
+# Refs: Req 5.3
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Cluster Addons (Infrastructure)
+  - addons/argocd-config.yaml
+  - addons/cert-manager.yaml # Helm chart
+  - addons/grafana.yaml # Helm chart
+  - addons/istio.yaml # Helm chart
+  - addons/keycloak.yaml # Helm chart
+  - addons/kyverno.yaml # Helm chart
+  - addons/kyverno-policies.yaml
+
+  # End-user Applications
+  - apps/homeassistant.yaml
+  - apps/jellyfin.yaml
+  - apps/netbox.yaml
+
+# Common labels for all app resources
+commonLabels:
+  homelab.local/managed-by: argocd

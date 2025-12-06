@@ -36,8 +36,8 @@ variable "vmid" {
 # -----------------------------------------------------------------------------
 
 variable "template" {
-  type        = string
-  description = "Proxmox template name to clone from (e.g., alma9-k3-node-amd64-v1.28.5-v1)"
+  type        = number
+  description = "Proxmox template VM ID to clone from (e.g., 100)"
 }
 
 variable "node" {

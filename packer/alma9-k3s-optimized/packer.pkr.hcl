@@ -1,5 +1,5 @@
 locals {
-  template_name = "alma${var.alma_version}-k3s-${replace(var.k3s_version, "+", "-")}-${formatdate("YYYYMMDDhhmm", timestamp())}"
+  template_name = "alma${var.alma_version}-k3s-stable-${formatdate("YYYYMMDDhhmm", timestamp())}"
 }
 
 packer {
@@ -90,17 +90,38 @@ source "proxmox-iso" "alma9-k3s" {
   ssh_host     = "10.23.45.200"
 
   template_name        = local.template_name
-  template_description = "AlmaLinux ${var.alma_version} + k3s ${var.k3s_version}"
+  template_description = "AlmaLinux ${var.alma_version} + k3s (stable) - Optimized for Proxmox"
 
-  tags = "packer;template;alma${replace(var.alma_version, ".", "_")};k3s_${replace(replace(var.k3s_version, ".", "_"), "+", "_")}"
+  tags = "packer;template;alma${replace(var.alma_version, ".", "_")};k3s_stable"
 }
 
 build {
   sources = ["source.proxmox-iso.alma9-k3s"]
 
-  # Install QEMU guest agent for better Proxmox integration
+  # 1. Update OS packages first
+  provisioner "shell" {
+    script = "${path.root}/scripts/os-update.sh"
+  }
+
+  # 2. Install QEMU guest agent for better Proxmox integration
   provisioner "shell" {
     script = "${path.root}/scripts/guest-agent.sh"
+  }
+
+  # 3. Upload k3s auto-deploy manifests to /tmp/manifests
+  # (k3s-install.sh will move them to /var/lib/rancher/k3s/server/manifests/)
+  provisioner "shell" {
+    inline = ["mkdir -p /tmp/manifests"]
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/files/argocd.yaml"
+    destination = "/tmp/manifests/argocd.yaml"
+  }
+
+  # 4. Install k3s and move manifests to k3s directory
+  provisioner "shell" {
+    script = "${path.root}/scripts/k3s-install.sh"
   }
 
   post-processor "manifest" {
@@ -109,7 +130,7 @@ build {
     custom_data = {
       template_name = local.template_name
       alma_version  = var.alma_version
-      k3s_version   = var.k3s_version
+      k3s_channel   = "stable"
       build_time    = timestamp()
     }
   }

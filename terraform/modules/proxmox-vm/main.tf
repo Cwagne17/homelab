@@ -14,12 +14,10 @@
 # =============================================================================
 
 terraform {
-  required_version = ">= 1.0"
-
   required_providers {
     proxmox = {
       source  = "telmate/proxmox"
-      version = ">= 2.9.0"
+      version = ">= 3.0.2-rc06"
     }
   }
 }
@@ -35,7 +33,8 @@ resource "proxmox_vm_qemu" "vm" {
   vmid        = var.vmid > 0 ? var.vmid : null
 
   # Clone from template
-  clone = var.template
+  clone_id   = var.template
+  full_clone = true
 
   # VM Options
   onboot = var.onboot
@@ -43,9 +42,11 @@ resource "proxmox_vm_qemu" "vm" {
   tags   = join(",", var.tags)
 
   # CPU Configuration
-  cores   = var.cores
-  sockets = 1
-  cpu     = "host"
+  cpu {
+    cores   = var.cores
+    sockets = 1
+    type    = "host"
+  }
 
   # Memory Configuration
   memory = var.memory
@@ -57,24 +58,19 @@ resource "proxmox_vm_qemu" "vm" {
   # SCSI disk with SSD emulation and discard enabled
   scsihw = "virtio-scsi-single"
 
-  disks {
-    scsi {
-      scsi0 {
-        disk {
-          storage = var.storage
-          size    = var.disk_size
-          # SSD emulation and discard for TRIM support
-          emulatessd = true
-          discard    = true
-          iothread   = true
-        }
-      }
-    }
+  disk {
+    slot     = "scsi0"
+    type     = "disk"
+    storage  = var.storage
+    size     = var.disk_size
+    discard  = true
+    iothread = true
   }
 
   # Network Configuration (Req 4.3)
   # virtio network interface on specified bridge
   network {
+    id     = 0
     model  = "virtio"
     bridge = var.bridge
   }

@@ -14,9 +14,16 @@
 #   - Atomic updates: Create new images to update k3s
 #
 # Flags used:
-#   --disable traefik    - Don't install default ingress (use custom)
+#   --disable traefik         - Don't install default ingress (use custom like nginx-ingress)
 #   --write-kubeconfig-mode 644 - Allow non-root kubeconfig access
-#   --node-name $(hostname) - Use VM hostname as node name
+#   --secrets-encryption      - Enable at-rest encryption for Kubernetes secrets
+#
+# Environment:
+#   INSTALL_K3S_SKIP_START    - Prevents service from starting during build
+#
+# Note: 
+#   - No version specified - uses stable channel (upgrade via System Upgrade Controller post-deploy)
+#   - Node name auto-detects from hostname (set by Terraform/cloud-init on deployment)
 #
 # Alternative approach (cloud-init):
 #   Instead of baking k3s, you could install it via cloud-init user-data.
@@ -28,10 +35,7 @@
 
 set -euo pipefail
 
-# K3S_VERSION is passed as environment variable from Packer
-K3S_VERSION="${K3S_VERSION:-v1.28.5+k3s1}"
-
-echo "==> Installing k3s version: ${K3S_VERSION}"
+echo "==> Installing k3s (stable channel)..."
 
 # -----------------------------------------------------------------------------
 # Install k3s Server
@@ -41,24 +45,21 @@ echo "==> Downloading and installing k3s..."
 
 # Install k3s using the official install script
 # The script handles architecture detection and systemd service setup
-curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${K3S_VERSION}" sh -s - server \
+# Node name will auto-detect from hostname when the VM boots
+# INSTALL_K3S_SKIP_START prevents the service from starting during image build
+curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_START=true sh -s - server \
     --disable traefik \
     --write-kubeconfig-mode 644 \
-    --node-name "\$(hostname)"
+    --secrets-encryption
 
-# Note: The above command installs k3s and enables the service but we'll
-# stop it after installation since the golden image shouldn't have a
-# running cluster with generated certificates.
+# Note: Service is installed but not started. The template will have k3s ready
+# to start on first boot without any generated certificates or cluster state.
 
 # -----------------------------------------------------------------------------
 # Configure k3s Service
 # -----------------------------------------------------------------------------
 
 echo "==> Configuring k3s service..."
-
-# Stop k3s for template preparation
-# The service will start fresh on first boot with new node identity
-systemctl stop k3s
 
 # Ensure service is enabled for automatic startup
 systemctl enable k3s
@@ -73,6 +74,26 @@ rm -f /var/lib/rancher/k3s/server/node-token
 echo "==> Cleaned k3s state for template."
 
 # -----------------------------------------------------------------------------
+# Install Auto-Deploy Manifests
+# -----------------------------------------------------------------------------
+
+echo "==> Installing k3s auto-deploy manifests..."
+
+# Create manifests directory (will be created by k3s on first start, but we need it now)
+MANIFESTS_DIR="/var/lib/rancher/k3s/server/manifests"
+mkdir -p "${MANIFESTS_DIR}"
+
+# Move any manifests from /tmp/manifests to the k3s manifests directory
+if [ -d /tmp/manifests ]; then
+    mv /tmp/manifests/* "${MANIFESTS_DIR}/" 2>/dev/null || true
+    rm -rf /tmp/manifests
+    echo "==> Installed auto-deploy manifests from /tmp/manifests"
+    ls -la "${MANIFESTS_DIR}/"
+else
+    echo "==> No manifests found in /tmp/manifests"
+fi
+
+# -----------------------------------------------------------------------------
 # Verify Installation
 # -----------------------------------------------------------------------------
 
@@ -84,9 +105,10 @@ if ! command -v k3s &> /dev/null; then
     exit 1
 fi
 
-# Verify version
+# Verify version (from stable channel)
 INSTALLED_VERSION=$(k3s --version | head -1)
 echo "==> Installed: ${INSTALLED_VERSION}"
+echo "==> Note: Version from stable channel. Use System Upgrade Controller for automatic updates."
 
 # Verify kubectl is available via k3s
 if ! k3s kubectl version --client &> /dev/null; then
@@ -96,31 +118,11 @@ fi
 
 echo "==> k3s kubectl available."
 
-# Verify systemd service exists
-if ! systemctl list-unit-files | grep -q k3s.service; then
-    echo "==> ERROR: k3s systemd service not found!"
+# Verify systemd service file exists
+if [ ! -f /etc/systemd/system/k3s.service ]; then
+    echo "==> ERROR: k3s systemd service file not found!"
     exit 1
 fi
-
-echo "==> k3s systemd service is configured."
-
-# -----------------------------------------------------------------------------
-# Create helpful aliases and configuration
-# -----------------------------------------------------------------------------
-
-echo "==> Setting up kubectl alias..."
-
-# Add kubectl alias for convenience
-cat >> /etc/profile.d/k3s.sh <<'EOF'
-# k3s kubectl alias
-alias kubectl='k3s kubectl'
-alias k='k3s kubectl'
-
-# kubeconfig for tools that need it
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-EOF
-
-chmod 644 /etc/profile.d/k3s.sh
 
 echo "==> k3s installation completed successfully."
 echo "==> On first boot, k3s will initialize a new cluster."

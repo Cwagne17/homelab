@@ -28,24 +28,19 @@ echo "==> Installing QEMU guest agent..."
 dnf install -y qemu-guest-agent
 
 # -----------------------------------------------------------------------------
-# Enable and Start Service
+# Enable Service
 # -----------------------------------------------------------------------------
 
 echo "==> Enabling QEMU guest agent service..."
 systemctl enable qemu-guest-agent
-systemctl start qemu-guest-agent
+
+echo "==> Note: Service will start automatically on first boot when virtio serial port is available."
 
 # -----------------------------------------------------------------------------
 # Verify Installation
 # -----------------------------------------------------------------------------
 
 echo "==> Verifying QEMU guest agent..."
-if systemctl is-active --quiet qemu-guest-agent; then
-    echo "==> QEMU guest agent is running."
-else
-    echo "==> WARNING: QEMU guest agent is not running!"
-    echo "==> This may be expected during Packer build (no virtio channel)."
-fi
 
 # Verify the agent binary exists
 if command -v qemu-ga &> /dev/null; then
