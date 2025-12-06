@@ -31,16 +31,30 @@ output "vm_node" {
 }
 
 # -----------------------------------------------------------------------------
+# SSH Key Paths
+# -----------------------------------------------------------------------------
+
+output "ssh_private_key_path" {
+  value       = local_file.private_key.filename
+  description = "Path to generated SSH private key"
+}
+
+output "ssh_public_key_path" {
+  value       = local_file.public_key.filename
+  description = "Path to generated SSH public key"
+}
+
+# -----------------------------------------------------------------------------
 # Access Commands
 # -----------------------------------------------------------------------------
 
 output "ssh_command" {
-  value       = module.k3s_node.ssh_command
+  value       = "ssh -i ${local_file.private_key.filename} ${local.ci_user}@${split("/", var.vm_ip)[0]}"
   description = "SSH command to connect to the VM"
 }
 
 output "kubeconfig_command" {
-  value       = module.k3s_node.kubeconfig_command
+  value       = "ssh -i ${local_file.private_key.filename} ${local.ci_user}@${split("/", var.vm_ip)[0]} 'sudo cat /etc/rancher/k3s/k3s.yaml' | sed 's/127.0.0.1/${split("/", var.vm_ip)[0]}/g'"
   description = "Command to fetch kubeconfig from the k3s node"
 }
 
@@ -50,18 +64,19 @@ output "kubeconfig_command" {
 
 output "kubectl_context" {
   value = {
-    cluster_name  = var.vm_name
+    cluster_name  = module.k3s_node.name
     cluster_ip    = split("/", var.vm_ip)[0]
     cluster_port  = 6443
+    ssh_key       = local_file.private_key.filename
     context_setup = <<-EOT
       # Fetch kubeconfig
-      ${module.k3s_node.kubeconfig_command} > ~/.kube/${var.vm_name}.yaml
+      ssh -i ${local_file.private_key.filename} ${local.ci_user}@${split("/", var.vm_ip)[0]} 'sudo cat /etc/rancher/k3s/k3s.yaml' | sed 's/127.0.0.1/${split("/", var.vm_ip)[0]}/g' > ~/.kube/${module.k3s_node.name}.yaml
 
       # Set KUBECONFIG or merge with existing
-      export KUBECONFIG=~/.kube/${var.vm_name}.yaml
+      export KUBECONFIG=~/.kube/${module.k3s_node.name}.yaml
 
       # Or merge with existing config
-      # KUBECONFIG=~/.kube/config:~/.kube/${var.vm_name}.yaml kubectl config view --flatten > ~/.kube/config.new
+      # KUBECONFIG=~/.kube/config:~/.kube/${module.k3s_node.name}.yaml kubectl config view --flatten > ~/.kube/config.new
       # mv ~/.kube/config.new ~/.kube/config
 
       # Verify connection
