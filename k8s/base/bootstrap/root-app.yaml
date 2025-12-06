@@ -1,19 +1,21 @@
 # =============================================================================
-# Argo CD App-of-Apps
+# Root App-of-Apps
 #
-# This is the root Application that manages all other applications.
-# It implements the "app-of-apps" pattern for GitOps.
+# This is the root Application that manages all platform and workload apps.
+# It points to k8s/apps/overlays/{env} which contains all ArgoCD Applications.
 #
-# Refs: Req 5.2
+# The path will be patched per environment:
+# - dev: k8s/apps/overlays/dev
+# - prod: k8s/apps/overlays/prod
 # =============================================================================
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: app-of-apps
+  name: root-app
   namespace: argocd
   labels:
-    app.kubernetes.io/name: app-of-apps
+    app.kubernetes.io/name: root-app
     app.kubernetes.io/part-of: homelab
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -21,9 +23,11 @@ spec:
   project: default
 
   source:
+    # TODO: Replace ORG/REPO with your actual GitHub org/repo
     repoURL: https://github.com/cwagne17/homelab.git
-    targetRevision: main
-    path: k8s/base/apps
+    targetRevision: HEAD
+    # Path will be patched per environment
+    path: k8s/apps/overlays/dev
 
   destination:
     server: https://kubernetes.default.svc
@@ -38,7 +42,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
-      - ApplyOutOfSyncOnly=true
 
     retry:
       limit: 5

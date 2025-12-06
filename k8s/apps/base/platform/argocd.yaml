@@ -1,0 +1,38 @@
+# =============================================================================
+# ArgoCD Platform Application
+#
+# Self-managing ArgoCD application. This allows ArgoCD to manage its own
+# configuration via GitOps (RBAC, ingress, ConfigMaps, etc.).
+#
+# This points to k8s/configs/argocd/ which contains ArgoCD configuration
+# manifests like RBAC policies, ingress, and settings.
+# =============================================================================
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-config
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/part-of: platform
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/cwagne17/homelab.git
+    targetRevision: HEAD
+    path: k8s/configs/argocd
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+
+  revisionHistoryLimit: 5

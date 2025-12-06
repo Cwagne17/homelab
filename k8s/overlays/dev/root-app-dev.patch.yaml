@@ -1,0 +1,16 @@
+# =============================================================================
+# Dev Root App Patch
+#
+# Patches the root app-of-apps to:
+# - Set project to "dev"
+# - Point to k8s/apps/overlays/dev for dev-specific apps
+# =============================================================================
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  source:
+    path: k8s/apps/overlays/dev

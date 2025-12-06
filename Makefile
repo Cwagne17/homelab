@@ -12,6 +12,7 @@
 # =============================================================================
 
 .PHONY: help packer tf-init tf-plan tf-apply tf-destroy \
+        k8s-dev-start k8s-dev-stop k8s-dev-deploy k8s-dev-argocd \
         k8s-bootstrap argo k8s-diff \
         preflight clean \
         docs docs-build docs-clean
@@ -36,7 +37,7 @@ PACKER_DIR := packer/alma9-k3s-optimized
 TF_DIR := terraform/envs/$(ENV)
 
 # Kubernetes cluster directory
-K8S_DIR := k8s/clusters/home
+K8S_DIR := k8s
 
 # -----------------------------------------------------------------------------
 # Default Target
@@ -61,6 +62,10 @@ help:
 	@echo ""
 	@echo "Kubernetes Targets:"
 	@echo "  k8s-bootstrap   - Apply bootstrap manifests (Argo CD)"
+	@echo "  k8s-dev-start   - Create local kind cluster for development"
+	@echo "  k8s-dev-stop    - Delete local kind cluster"
+	@echo "  k8s-dev-deploy  - Deploy dev overlay to kind cluster"
+	@echo "  k8s-dev-argocd  - Access Argo CD UI on kind cluster"
 	@echo "  argo            - Apply app-of-apps root application"
 	@echo "  k8s-diff        - Show diff of Kubernetes manifests"
 	@echo ""
@@ -141,6 +146,44 @@ tf-validate:
 # -----------------------------------------------------------------------------
 # Kubernetes Targets (Req 6.4, 6.5)
 # -----------------------------------------------------------------------------
+
+# Local Development Cluster
+k8s-dev-start:
+	@echo "==> Starting local development Kubernetes cluster with kind..."
+	@if ! command -v kind &> /dev/null; then \
+		echo "ERROR: kind is not installed"; \
+		echo "Install with: brew install kind"; \
+		exit 1; \
+	fi
+	@if kind get clusters | grep -q homelab-dev; then \
+		echo "Cluster 'homelab-dev' already exists"; \
+	else \
+		kind create cluster --name homelab-dev; \
+	fi
+	@echo ""
+	@echo "Cluster ready! Next steps:"
+	@echo "  1. Install ArgoCD:  make k8s-bootstrap"
+	@echo "  2. Deploy apps:     make k8s-dev-deploy"
+	@echo "  3. Access ArgoCD:   make k8s-dev-argocd"
+
+k8s-dev-stop:
+	@echo "==> Stopping local development cluster..."
+	kind delete cluster --name homelab-dev
+
+k8s-dev-deploy:
+	@echo "==> Deploying dev apps to local cluster..."
+	kubectl apply -k $(K8S_DIR)/overlays/dev
+
+k8s-dev-argocd:
+	@echo "==> Accessing ArgoCD UI..."
+	@echo "Getting admin password..."
+	@kubectl -n argocd get secret argocd-initial-admin-secret \
+		-o jsonpath="{.data.password}" 2>/dev/null | base64 -d && echo
+	@echo ""
+	@echo "Port-forwarding to ArgoCD server..."
+	@echo "Access UI at: https://localhost:8080"
+	@echo "Username: admin"
+	kubectl port-forward svc/argocd-server -n argocd 8080:443
 
 k8s-bootstrap:
 	@echo "==> Applying bootstrap manifests (Argo CD)..."

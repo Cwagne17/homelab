@@ -1,0 +1,26 @@
+# =============================================================================
+# Kyverno Policies Configuration
+#
+# This directory contains Kyverno policy manifests for cluster governance.
+#
+# TODO: Add policy files:
+# - pod-security-standards.yaml (PSS policies)
+# - require-resource-limits.yaml
+# - require-labels.yaml
+# - disallow-latest-tag.yaml
+# - require-probes.yaml
+# - restrict-image-registries.yaml
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  []
+  # TODO: Add Kyverno policy resources here
+  # - pod-security-standards.yaml
+  # - require-resource-limits.yaml
+  # - require-labels.yaml
+  # - disallow-latest-tag.yaml
+  # - require-probes.yaml
+  # - restrict-image-registries.yaml

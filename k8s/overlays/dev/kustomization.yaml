@@ -1,11 +1,12 @@
 # =============================================================================
-# Prod Overlay - Root App-of-Apps
+# Dev Overlay - Root App-of-Apps
 #
-# This overlay creates the root app-of-apps pointing to k8s/apps/overlays/prod.
+# This overlay creates the root app-of-apps pointing to k8s/apps/overlays/dev.
 #
 # Prerequisites:
-#   1. ArgoCD is installed via k3s HelmChart during VM boot
-#   2. Then apply this: kubectl apply -k k8s/overlays/prod
+#   1. Install ArgoCD first: kubectl apply -k k8s/bootstrap
+#   2. Wait for ArgoCD to be ready
+#   3. Then apply this: kubectl apply -k k8s/overlays/dev
 # =============================================================================
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -18,12 +19,12 @@ resources:
   - ../../base/bootstrap
 
 patches:
-  # Patch the root app to point to prod apps
-  - path: root-app-prod.patch.yaml
+  # Patch the root app to point to dev apps
+  - path: root-app-dev.patch.yaml
     target:
       kind: Application
       name: root
 
 commonLabels:
-  environment: production
-  cluster: home
+  environment: development
+  cluster: local

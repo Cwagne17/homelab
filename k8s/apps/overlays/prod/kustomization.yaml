@@ -1,0 +1,27 @@
+# =============================================================================
+# Prod Apps Kustomization
+#
+# References all platform and workload Applications from base,
+# then applies prod-specific patches to override Helm values.
+# =============================================================================
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Platform add-ons
+  - ../../base/platform/argocd.yaml
+  - ../../base/platform/cert-manager.yaml
+  - ../../base/platform/grafana.yaml
+  - ../../base/platform/istio.yaml
+  - ../../base/platform/keycloak.yaml
+  - ../../base/platform/kyverno.yaml
+  - ../../base/platform/kyverno-policies.yaml
+
+  # Workloads
+  - ../../base/workloads/home-assistant.yaml
+  - ../../base/workloads/jellyfin.yaml
+  - ../../base/workloads/netbox.yaml
+
+commonLabels:
+  environment: production
