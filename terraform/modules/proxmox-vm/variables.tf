@@ -107,7 +107,7 @@ variable "ssh_pubkey" {
   type        = string
   description = "SSH public key for cloud-init user"
   # TODO: Replace with your SSH public key
-  default     = ""
+  default = ""
 }
 
 variable "ip" {

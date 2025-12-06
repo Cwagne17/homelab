@@ -54,20 +54,20 @@ terraform {
 
 locals {
   # Infrastructure constants (don't change)
-  proxmox_api_url    = "https://10.23.45.10:8006/api2/json"
-  proxmox_token_id   = "terraform@pve!terraform"
-  proxmox_node       = "pve"
-  network_bridge     = "vmbr0"
-  
+  proxmox_api_url  = "https://10.23.45.10:8006/api2/json"
+  proxmox_token_id = "terraform@pve!terraform"
+  proxmox_node     = "pve"
+  network_bridge   = "vmbr0"
+
   # Network constants
-  gateway            = "10.23.45.1"
-  nameserver         = "10.23.45.1"  # Pi-hole DNS server
-  
+  gateway    = "10.23.45.1"
+  nameserver = "10.23.45.1" # Pi-hole DNS server
+
   # Cloud-init user
-  ci_user            = "admin"
-  
+  ci_user = "admin"
+
   # Generate unique VM name with random suffix
-  vm_name            = "prod-alma9-k3s-${random_id.vm_suffix.hex}"
+  vm_name = "prod-alma9-k3s-${random_id.vm_suffix.hex}"
 }
 
 # Generate random hex suffix for VM name
@@ -107,7 +107,7 @@ provider "proxmox" {
   pm_api_token_id     = local.proxmox_token_id
   pm_api_token_secret = var.pm_api_token_secret
   pm_tls_insecure     = true
-  
+
   # Debug logging
   pm_log_enable = true
   pm_log_file   = "terraform-plugin-proxmox.log"

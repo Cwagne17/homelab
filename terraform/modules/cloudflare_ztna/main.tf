@@ -67,12 +67,12 @@ resource "cloudflare_dns_record" "app" {
 resource "cloudflare_zero_trust_access_application" "app" {
   for_each = var.access_applications
 
-  account_id                = var.account_id
-  name                      = "${each.key}.${var.zone_name}"
-  domain                    = "${each.key}.${var.zone_name}"
-  type                      = "self_hosted"
-  session_duration          = each.value.session_duration
-  
+  account_id       = var.account_id
+  name             = "${each.key}.${var.zone_name}"
+  domain           = "${each.key}.${var.zone_name}"
+  type             = "self_hosted"
+  session_duration = each.value.session_duration
+
   # Link policies to this application
   policies = [
     {
@@ -84,7 +84,7 @@ resource "cloudflare_zero_trust_access_application" "app" {
       precedence = 100
     }
   ]
-  
+
   depends_on = [
     cloudflare_zero_trust_access_policy.allow,
     cloudflare_zero_trust_access_policy.default_deny
@@ -122,7 +122,7 @@ resource "cloudflare_zero_trust_access_policy" "allow" {
         }
       }
     ] : [],
-    
+
     # Country requirement
     length(each.value.require.countries) > 0 ? [
       for country in each.value.require.countries : {
@@ -131,7 +131,7 @@ resource "cloudflare_zero_trust_access_policy" "allow" {
         }
       }
     ] : [],
-    
+
     # IP range requirement
     length(each.value.require.ip_ranges) > 0 ? [
       for ip_range in each.value.require.ip_ranges : {
@@ -152,7 +152,7 @@ resource "cloudflare_zero_trust_access_policy" "allow" {
         }
       }
     ] : [],
-    
+
     # Country exclude
     length(each.value.exclude.countries) > 0 ? [
       for country in each.value.exclude.countries : {
@@ -161,7 +161,7 @@ resource "cloudflare_zero_trust_access_policy" "allow" {
         }
       }
     ] : [],
-    
+
     # IP range exclude
     length(each.value.exclude.ip_ranges) > 0 ? [
       for ip_range in each.value.exclude.ip_ranges : {

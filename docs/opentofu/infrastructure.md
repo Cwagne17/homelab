@@ -252,7 +252,7 @@ provider "proxmox" {
   pm_api_url      = "https://10.23.45.10:8006/api2/json"
   pm_api_token_id = "terraform@pve!terraform"
   pm_tls_insecure = true
-
+  
   # Debug logging
   pm_log_enable = true
   pm_log_file   = "terraform-plugin-proxmox.log"
@@ -263,9 +263,106 @@ provider "proxmox" {
 }
 ```
 
-## State Management
+### VM Stuck at "Booting from hard disk"
 
-!!! warning "State Security"
+**Problem**: VM boots but hangs at "Booting from hard disk" message and never reaches login prompt.
+
+**Root Cause**: The Packer template uses OVMF (EFI) firmware, but when Terraform clones the VM, the provider defaults to SeaBIOS (legacy BIOS). This causes a boot configuration mismatch.
+
+**Symptoms**:
+- VM config shows `bios: seabios` instead of `bios: ovmf`
+- EFI disk is present but system tries to boot with legacy BIOS
+- Boot hangs indefinitely at "Booting from hard disk"
+
+**Solution**: Explicitly configure OVMF/EFI in the Terraform module:
+
+```hcl
+resource "proxmox_vm_qemu" "vm" {
+  # ... other config ...
+  
+  # BIOS/Firmware Configuration
+  bios    = "ovmf"
+  machine = "q35"
+  
+  # EFI disk (required for OVMF BIOS)
+  efidisk {
+    storage           = "local-lvm"
+    efitype           = "4m"
+    pre_enrolled_keys = false
+  }
+  
+  # ... rest of config ...
+}
+```
+
+**Verification**: Check the VM configuration in Proxmox:
+```bash
+qm config <vmid> | grep -E '(bios|efidisk|machine)'
+```
+
+Should show:
+```
+bios: ovmf
+efidisk0: local-lvm:vm-<id>-disk-X,efitype=4m,pre-enrolled-keys=0,size=4M
+machine: q35
+```
+
+### Cloud-init Not Running
+
+**Problem**: VM boots but retains default Packer hostname, root password unchanged, network configuration not applied.
+
+**Symptoms**:
+- Login prompt shows "packer-alma9 login:" instead of Terraform-configured hostname
+- Proxmox Cloud-Init tab shows "no cloud init drive found"
+- SSH key not installed, IP address not configured
+- `qm config <vmid>` shows no `ide2` or `ide0` cloud-init drive
+
+**Root Cause**: The cloud-init CD-ROM drive (typically IDE2) is not being created when cloning the template. Even though cloud-init parameters (ciuser, ipconfig0, sshkeys) are set in Terraform, without the drive, they cannot be applied to the VM.
+
+**Solution**: Explicitly add the cloud-init drive in the Terraform module:
+
+```hcl
+resource "proxmox_vm_qemu" "vm" {
+  # ... other config ...
+  
+  # Cloud-init drive (IDE2 or IDE0)
+  disk {
+    slot    = "ide2"
+    type    = "cloudinit"
+    storage = "local-lvm"
+  }
+  
+  # Cloud-init Configuration
+  os_type    = "cloud-init"
+  ciuser     = var.ci_user
+  sshkeys    = var.ssh_pubkey
+  ipconfig0  = "ip=${var.ip},gw=${var.gateway}"
+  nameserver = var.nameserver
+  
+  # ... rest of config ...
+}
+```
+
+**Verification**: Check the VM configuration in Proxmox:
+```bash
+qm config <vmid> | grep -E '(ide|ciuser|ipconfig)'
+```
+
+Should show:
+```
+ciuser: admin
+ide2: local-lvm:vm-<id>-cloudinit,media=cdrom
+ipconfig0: ip=10.23.45.31/24,gw=10.23.45.1
+```
+
+**Check cloud-init status inside the VM**:
+```bash
+# From Proxmox console or SSH
+cloud-init status
+journalctl -u cloud-init
+```
+
+## State Management!!! warning "State Security"
 Terraform state may contain sensitive values. Consider using: - Remote state (S3, Consul) with encryption - State locking with DynamoDB or similar - Access controls on state storage
 
 ### Example Remote Backend

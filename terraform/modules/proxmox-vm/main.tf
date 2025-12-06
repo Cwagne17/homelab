@@ -41,6 +41,10 @@ resource "proxmox_vm_qemu" "vm" {
   agent  = var.agent
   tags   = join(",", var.tags)
 
+  # BIOS/Firmware Configuration
+  bios    = "ovmf"
+  machine = "q35"
+
   # CPU Configuration
   cpu {
     cores   = var.cores
@@ -57,6 +61,13 @@ resource "proxmox_vm_qemu" "vm" {
   # Storage Configuration (Req 4.2)
   # SCSI disk with SSD emulation and discard enabled
   scsihw = "virtio-scsi-single"
+
+  # EFI disk (required for OVMF BIOS)
+  efidisk {
+    storage           = "local-lvm"
+    efitype           = "4m"
+    pre_enrolled_keys = false
+  }
 
   disk {
     slot     = "scsi0"
@@ -75,11 +86,18 @@ resource "proxmox_vm_qemu" "vm" {
     bridge = var.bridge
   }
 
+  # Cloud-init drive (IDE2)
+  disk {
+    slot    = "ide2"
+    type    = "cloudinit"
+    storage = "local-lvm"
+  }
+
   # Cloud-init Configuration (Req 3.2, 4.4)
-  os_type   = "cloud-init"
-  ciuser    = var.ci_user
-  sshkeys   = var.ssh_pubkey
-  ipconfig0 = "ip=${var.ip},gw=${var.gateway}"
+  os_type    = "cloud-init"
+  ciuser     = var.ci_user
+  sshkeys    = var.ssh_pubkey
+  ipconfig0  = "ip=${var.ip},gw=${var.gateway}"
   nameserver = var.nameserver
 
   # Optional custom user-data snippet

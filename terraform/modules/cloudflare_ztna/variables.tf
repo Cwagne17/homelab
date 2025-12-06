@@ -29,7 +29,7 @@ variable "access_applications" {
   type = map(object({
     session_duration = optional(string, "24h")
     policy_name      = optional(string, "Allow Access")
-    
+
     # Include conditions (at least one must match)
     include = object({
       emails = optional(list(string), [])

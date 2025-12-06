@@ -29,7 +29,7 @@ variable "template_name" {
   description = "Golden image template VM ID (from Packer build)"
   # Use the VM ID number of the template
   # Example: 100 for alma9.6-k3s-stable-202512061712
-  default     = 100
+  default = 100
 }
 
 variable "storage_pool" {
