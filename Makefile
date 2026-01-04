@@ -13,7 +13,7 @@
 
 .PHONY: help packer tf-init tf-plan tf-apply tf-destroy \
         k8s-dev-start k8s-dev-stop k8s-dev-deploy k8s-dev-argocd \
-        k8s-bootstrap argo k8s-diff \
+        k8s-bootstrap argo k8s-diff k8s-kubeconfig \
         preflight clean \
         docs docs-build docs-clean
 
@@ -66,6 +66,7 @@ help:
 	@echo "  k8s-dev-stop    - Delete local kind cluster"
 	@echo "  k8s-dev-deploy  - Deploy dev overlay to kind cluster"
 	@echo "  k8s-dev-argocd  - Access Argo CD UI on kind cluster"
+	@echo "  k8s-kubeconfig  - Export Talos cluster kubeconfig to ~/.kube/config"
 	@echo "  argo            - Apply app-of-apps root application"
 	@echo "  k8s-diff        - Show diff of Kubernetes manifests"
 	@echo ""
@@ -196,6 +197,35 @@ argo:
 k8s-diff:
 	@echo "==> Showing Kubernetes manifest diff..."
 	kubectl diff -k $(K8S_DIR) || true
+
+k8s-kubeconfig:
+	@echo "==> Exporting Talos cluster kubeconfig..."
+	@KUBECONFIG_SRC=terraform/envs/talos_cluster/output/kubeconfig; \
+	KUBECONFIG_DST=$$HOME/.kube/config; \
+	if [ ! -f "$$KUBECONFIG_SRC" ]; then \
+		echo "ERROR: Kubeconfig not found at $$KUBECONFIG_SRC"; \
+		echo "Have you run 'make tf-apply ENV=talos_cluster' yet?"; \
+		exit 1; \
+	fi; \
+	mkdir -p $$HOME/.kube; \
+	if [ -f "$$KUBECONFIG_DST" ]; then \
+		echo "Backing up existing kubeconfig to $$KUBECONFIG_DST.backup"; \
+		cp "$$KUBECONFIG_DST" "$$KUBECONFIG_DST.backup"; \
+		echo "Merging Talos kubeconfig with existing config..."; \
+		KUBECONFIG="$$KUBECONFIG_DST:$$KUBECONFIG_SRC" kubectl config view --flatten > "$$KUBECONFIG_DST.tmp"; \
+		mv "$$KUBECONFIG_DST.tmp" "$$KUBECONFIG_DST"; \
+		chmod 600 "$$KUBECONFIG_DST"; \
+		echo "Kubeconfig merged successfully!"; \
+	else \
+		echo "Copying Talos kubeconfig to $$KUBECONFIG_DST"; \
+		cp "$$KUBECONFIG_SRC" "$$KUBECONFIG_DST"; \
+		chmod 600 "$$KUBECONFIG_DST"; \
+		echo "Kubeconfig copied successfully!"; \
+	fi; \
+	echo ""; \
+	echo "Current context: $$(kubectl config current-context)"; \
+	echo "Available contexts:"; \
+	kubectl config get-contexts
 
 # -----------------------------------------------------------------------------
 # Utility Targets (Req 8.3)
