@@ -1,6 +1,15 @@
 terraform {
   required_version = ">= 1.7.0"
 
+  backend "s3" {
+    bucket         = "homelab-terraform-state-678730054304"
+    key            = "talos-cluster/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "homelab-terraform-locks"
+    encrypt        = true
+    profile        = "chris-personal-mgmt"
+  }
+
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
