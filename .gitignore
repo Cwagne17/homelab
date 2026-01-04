@@ -83,3 +83,5 @@ build/
 # Python
 venv/*
 site/*
+
+terraform/envs/talos_cluster/output/

@@ -1,24 +1,18 @@
-locals {
-  # Extract IP address from CIDR notation
-  node_ips = {
-    for k, v in var.nodes : k => split("/", v.ip_cidr)[0]
-  }
-}
-
 resource "proxmox_virtual_environment_vm" "this" {
   for_each = var.nodes
 
   node_name = var.proxmox_host_node
-  name      = each.key
-  description = each.value.machine_type == "controlplane" ? "Talos Control Plane" : "Talos Worker"
+
+  name        = each.key
+  description = each.value.machine_type == "controlplane" ? "Talos Control Plane Node" : "Talos Worker Node"
   tags        = concat(["talos", "kubernetes"], each.value.machine_type == "controlplane" ? ["control-plane"] : ["worker"])
   on_boot     = true
   vm_id       = each.value.vm_id
 
   # Talos best practices for Proxmox
-  machine       = "q35"               # Modern PCIe-based machine type
-  scsi_hardware = "virtio-scsi-pci"   # NOT virtio-scsi-single (causes bootstrap issues)
-  bios          = "ovmf"              # UEFI firmware
+  machine       = "q35"             # Modern PCIe-based machine type
+  scsi_hardware = "virtio-scsi-pci" # NOT virtio-scsi-single (causes bootstrap issues)
+  bios          = "ovmf"            # UEFI firmware
 
   # Enable QEMU guest agent (Talos image includes qemu-guest-agent extension)
   agent {
@@ -31,12 +25,12 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   memory {
-    dedicated = each.value.ram_mb
+    dedicated = each.value.memory
   }
 
   network_device {
-    bridge      = "vmbr0"
-    model       = "virtio" # Paravirtualized driver for best performance
+    bridge = "vmbr0"
+    model  = "virtio" # Paravirtualized driver for best performance
   }
 
   # EFI disk (required for UEFI/OVMF)
@@ -54,8 +48,8 @@ resource "proxmox_virtual_environment_vm" "this" {
     cache        = "writethrough" # Safe default for write cache
     discard      = "on"
     ssd          = true
-    file_format  = "raw"          # Best performance
-    size         = each.value.disk_gb
+    file_format  = "raw" # Best performance
+    size         = each.value.disk_size
     file_id      = proxmox_virtual_environment_download_file.this.id
   }
 
@@ -63,11 +57,6 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   operating_system {
     type = "l26" # Linux Kernel 2.6 - 6.X
-  }
-
-  # Disable ballooning - Talos doesn't support memory hotplug
-  memory {
-    dedicated = each.value.ram_mb
   }
 
   # Enable serial console for troubleshooting

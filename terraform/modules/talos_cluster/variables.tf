@@ -1,10 +1,10 @@
 variable "cluster" {
   description = "Cluster configuration"
   type = object({
-    name            = string                # Cluster name
-    endpoint        = string                # Kubernetes API endpoint (DNS name or IP with port, e.g., "k8s.example.com:6443" or "192.168.1.100:6443")
-    talos_version   = string                # Talos version (e.g., "v1.11.5")
-    proxmox_cluster = optional(string, "")  # Optional Proxmox cluster name for node labels
+    name            = string               # Cluster name
+    endpoint        = string               # Kubernetes API endpoint (DNS name or IP with port, e.g., "k8s.example.com:6443" or "192.168.1.100:6443")
+    talos_version   = string               # Talos version (e.g., "v1.11.5")
+    proxmox_cluster = optional(string, "") # Optional Proxmox cluster name for node labels
   })
 
   validation {
@@ -16,12 +16,12 @@ variable "cluster" {
 variable "nodes" {
   description = "Configuration for cluster nodes keyed by hostname"
   type = map(object({
-    machine_type = string                # "controlplane" or "worker"
-    vm_id        = number                # Proxmox VM ID
-    cpu          = number                # Number of CPU cores
-    ram_mb       = number                # RAM in MB
-    disk_gb      = number                # Disk size in GB
-    ip_cidr      = string                # IP address with CIDR (e.g., "192.168.1.100/24")
+    machine_type = string # "controlplane" or "worker"
+    vm_id        = number # Proxmox VM ID
+    cpu          = number # Number of CPU cores
+    memory       = number # RAM in MB
+    disk_size    = number # Disk size in GB
+    private_ip   = string # IP address with CIDR (e.g., "192.168.1.100/24")
   }))
 
   validation {
@@ -33,21 +33,10 @@ variable "nodes" {
 
   validation {
     condition = alltrue([
-      for k, v in var.nodes : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", v.ip_cidr))
+      for k, v in var.nodes : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", v.private_ip))
     ])
-    error_message = "ip_cidr must be in CIDR format (e.g., 192.168.1.100/24)"
+    error_message = "private_ip must be in CIDR format (e.g., 192.168.1.100/24)"
   }
-}
-
-variable "talos_schematic" {
-  description = "Talos Image Factory schematic YAML content"
-  type        = string
-  default     = <<-EOT
-    customization:
-      systemExtensions:
-        officialExtensions:
-          - siderolabs/qemu-guest-agent
-  EOT
 }
 
 variable "proxmox_host_node" {
@@ -56,15 +45,15 @@ variable "proxmox_host_node" {
 }
 
 variable "proxmox_datastore" {
-  description = "Proxmox datastore for VM disks"
+  description = "Proxmox datastore for VM disks (EFI and main disk)"
   type        = string
-  default     = "local-zfs"
+  default     = "vmdata"
 }
 
 variable "proxmox_iso_datastore" {
   description = "Proxmox datastore for ISO images"
   type        = string
-  default     = "local"
+  default     = "local-120"
 }
 
 variable "network_gateway" {

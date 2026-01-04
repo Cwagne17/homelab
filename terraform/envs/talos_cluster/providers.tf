@@ -1,35 +1,31 @@
 terraform {
+  required_version = ">= 1.7.0"
+
   required_providers {
-    # kubernetes = {
-    #   source  = "hashicorp/kubernetes"
-    #   version = "3.0.1"
-    # }
     proxmox = {
       source  = "bpg/proxmox"
-      version = "0.90.0"
+      version = ">= 0.70.0"
     }
     talos = {
       source  = "siderolabs/talos"
-      version = "0.9.0"
+      version = "~> 0.9.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = ">= 2.4.0"
     }
   }
 }
 
 provider "proxmox" {
+  // Must be within the same network as the Proxmox server
   endpoint = "https://10.23.45.10:8006"
   insecure = true
 
   api_token = var.proxmox_api_token
+
   ssh {
-    agent    = true
-    username = "terraform"
+    agent       = true
+    username    = "root"
   }
 }
-
-
-# provider "kubernetes" {
-#   host                   = module.talos.kube_config.kubernetes_client_configuration.host
-#   client_certificate     = base64decode(module.talos.kube_config.kubernetes_client_configuration.client_certificate)
-#   client_key             = base64decode(module.talos.kube_config.kubernetes_client_configuration.client_key)
-#   cluster_ca_certificate = base64decode(module.talos.kube_config.kubernetes_client_configuration.ca_certificate)
-# }

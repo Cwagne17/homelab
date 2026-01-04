@@ -1,12 +1,7 @@
 locals {
   # Extract IP address from CIDR notation for each node
   node_ips = {
-    for k, v in var.nodes : k => split("/", v.ip_cidr)[0]
-  }
-
-  # Extract subnet mask from CIDR notation
-  node_subnet_masks = {
-    for k, v in var.nodes : k => split("/", v.ip_cidr)[1]
+    for k, v in var.nodes : k => split("/", v.private_ip)[0]
   }
 
   # Find first control plane node IP for bootstrap
@@ -14,9 +9,17 @@ locals {
     for k, v in var.nodes : local.node_ips[k]
     if v.machine_type == "controlplane"
   ][0]
-
-  # Extract endpoint host (remove :port if present)
-  endpoint_host = split(":", var.cluster.endpoint)[0]
+  
+  # Extract actual usable IPs from VMs (filter out localhost and link-local)
+  vm_ips = {
+    for k, v in proxmox_virtual_environment_vm.this : k => [
+      for ip in flatten(v.ipv4_addresses) : ip
+      if !startswith(ip, "127.") && !startswith(ip, "169.254.")
+    ][0] if length([
+      for ip in flatten(v.ipv4_addresses) : ip
+      if !startswith(ip, "127.") && !startswith(ip, "169.254.")
+    ]) > 0
+  }
 }
 
 # Generate Talos machine secrets (certificates, tokens, etc.)
@@ -43,33 +46,20 @@ data "talos_machine_configuration" "this" {
   machine_secrets  = talos_machine_secrets.this.machine_secrets
 
   config_patches = [
-    yamlencode({
-      machine = {
-        network = {
-          hostname = each.key
-          interfaces = [{
-            interface = "eth0"
-            addresses = [each.value.ip_cidr]
-            routes = [{
-              network = "0.0.0.0/0"
-              gateway = var.network_gateway
-            }]
-            dhcp = false
-          }]
-        }
-        nodeLabels = merge(
-          var.cluster.proxmox_cluster != "" ? {
-            "topology.kubernetes.io/region" = var.cluster.proxmox_cluster
-            "topology.kubernetes.io/zone"   = var.proxmox_host_node
-          } : {},
-          {
-            "node.kubernetes.io/instance-type" = each.value.machine_type
-          }
-        )
-      }
-      cluster = each.value.machine_type == "controlplane" ? {
-        allowSchedulingOnControlPlanes = true
-      } : null
+    each.value.machine_type == "controlplane" ?
+    templatefile("${path.module}/config/controlplane.yaml.tftpl", {
+      hostname          = each.key
+      ip_cidr           = each.value.private_ip
+      gateway           = var.network_gateway
+      proxmox_cluster   = var.cluster.proxmox_cluster
+      proxmox_host_node = var.proxmox_host_node
+    }) :
+    templatefile("${path.module}/config/worker.yaml.tftpl", {
+      hostname          = each.key
+      ip_cidr           = each.value.private_ip
+      gateway           = var.network_gateway
+      proxmox_cluster   = var.cluster.proxmox_cluster
+      proxmox_host_node = var.proxmox_host_node
     })
   ]
 }
@@ -80,7 +70,9 @@ resource "talos_machine_configuration_apply" "this" {
 
   for_each = var.nodes
 
-  node                        = local.node_ips[each.key]
+  # Use the VM's actual DHCP IP for initial connection, will switch to static after config applied
+  node                        = try(local.vm_ips[each.key], local.node_ips[each.key])
+  endpoint                    = try(local.vm_ips[each.key], local.node_ips[each.key])
   client_configuration        = talos_machine_secrets.this.client_configuration
   machine_configuration_input = data.talos_machine_configuration.this[each.key].machine_configuration
 
@@ -93,10 +85,11 @@ resource "talos_machine_configuration_apply" "this" {
 
 # Bootstrap the Talos cluster (run once on first control plane)
 resource "talos_machine_bootstrap" "this" {
-  depends_on = [talos_machine_configuration_apply.this]
-
   node                 = local.first_controlplane_ip
   client_configuration = talos_machine_secrets.this.client_configuration
+
+  # Ensure control plane is configured before bootstrap
+  depends_on = [talos_machine_configuration_apply.this]
 }
 
 # Wait for cluster to be healthy
