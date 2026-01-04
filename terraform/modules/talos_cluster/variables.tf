@@ -1,51 +1,73 @@
-variable "image" {
-  description = "Talos image configuration"
-  type = object({
-    factory_url           = optional(string, "https://factory.talos.dev")
-    schematic_path        = string
-    version               = string
-    update_schematic_path = optional(string)
-    update_version        = optional(string)
-    arch                  = optional(string, "amd64")
-    platform              = optional(string, "nocloud")
-    proxmox_datastore     = optional(string, "local")
-  })
-}
-
 variable "cluster" {
   description = "Cluster configuration"
   type = object({
-    name                         = string
-    vip                          = optional(string)
-    gateway                      = string
-    subnet_mask                  = optional(string, "24")
-    talos_machine_config_version = optional(string)
-    proxmox_cluster              = string
-    kubernetes_version           = string
-    gateway_api_version          = string
-    extra_manifests              = optional(list(string))
-    kubelet                      = optional(string)
-    api_server                   = optional(string)
-    cilium = object({
-      bootstrap_manifest_path = string
-      values_file_path        = string
-    })
+    name            = string                # Cluster name
+    endpoint        = string                # Kubernetes API endpoint (DNS name or IP with port, e.g., "k8s.example.com:6443" or "192.168.1.100:6443")
+    talos_version   = string                # Talos version (e.g., "v1.11.5")
+    proxmox_cluster = optional(string, "")  # Optional Proxmox cluster name for node labels
   })
+
+  validation {
+    condition     = can(regex("^v[0-9]+\\.[0-9]+\\.[0-9]+$", var.cluster.talos_version))
+    error_message = "talos_version must be in the format vX.Y.Z (e.g., v1.11.5)"
+  }
 }
 
 variable "nodes" {
-  description = "Configuration for cluster nodes"
+  description = "Configuration for cluster nodes keyed by hostname"
   type = map(object({
-    host_node     = string
-    machine_type  = string
-    datastore_id  = optional(string, "local-zfs")
-    ip            = string
-    dns           = optional(list(string))
-    mac_address   = string
-    vm_id         = number
-    cpu           = number
-    ram_dedicated = number
-    update        = optional(bool, false)
-    igpu          = optional(bool, false)
+    machine_type = string                # "controlplane" or "worker"
+    vm_id        = number                # Proxmox VM ID
+    cpu          = number                # Number of CPU cores
+    ram_mb       = number                # RAM in MB
+    disk_gb      = number                # Disk size in GB
+    ip_cidr      = string                # IP address with CIDR (e.g., "192.168.1.100/24")
   }))
+
+  validation {
+    condition = alltrue([
+      for k, v in var.nodes : contains(["controlplane", "worker"], v.machine_type)
+    ])
+    error_message = "machine_type must be either 'controlplane' or 'worker'"
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.nodes : can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$", v.ip_cidr))
+    ])
+    error_message = "ip_cidr must be in CIDR format (e.g., 192.168.1.100/24)"
+  }
+}
+
+variable "talos_schematic" {
+  description = "Talos Image Factory schematic YAML content"
+  type        = string
+  default     = <<-EOT
+    customization:
+      systemExtensions:
+        officialExtensions:
+          - siderolabs/qemu-guest-agent
+  EOT
+}
+
+variable "proxmox_host_node" {
+  description = "Proxmox node name where VMs will run"
+  type        = string
+}
+
+variable "proxmox_datastore" {
+  description = "Proxmox datastore for VM disks"
+  type        = string
+  default     = "local-zfs"
+}
+
+variable "proxmox_iso_datastore" {
+  description = "Proxmox datastore for ISO images"
+  type        = string
+  default     = "local"
+}
+
+variable "network_gateway" {
+  description = "Network gateway for all nodes"
+  type        = string
 }

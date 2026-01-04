@@ -1,82 +1,75 @@
+locals {
+  # Extract IP address from CIDR notation
+  node_ips = {
+    for k, v in var.nodes : k => split("/", v.ip_cidr)[0]
+  }
+}
+
 resource "proxmox_virtual_environment_vm" "this" {
   for_each = var.nodes
 
-  node_name = each.value.host_node
-
-  name        = each.key
+  node_name = var.proxmox_host_node
+  name      = each.key
   description = each.value.machine_type == "controlplane" ? "Talos Control Plane" : "Talos Worker"
-  tags        = each.value.machine_type == "controlplane" ? ["k8s", "control-plane"] : ["k8s", "worker"]
+  tags        = concat(["talos", "kubernetes"], each.value.machine_type == "controlplane" ? ["control-plane"] : ["worker"])
   on_boot     = true
   vm_id       = each.value.vm_id
 
-  machine       = "q35"
-  scsi_hardware = "virtio-scsi-single"
-  bios          = "seabios"
+  # Talos best practices for Proxmox
+  machine       = "q35"               # Modern PCIe-based machine type
+  scsi_hardware = "virtio-scsi-pci"   # NOT virtio-scsi-single (causes bootstrap issues)
+  bios          = "ovmf"              # UEFI firmware
 
+  # Enable QEMU guest agent (Talos image includes qemu-guest-agent extension)
   agent {
     enabled = true
   }
 
   cpu {
     cores = each.value.cpu
-    type  = "host"
+    type  = "host" # Best performance, enables advanced instruction sets
   }
 
   memory {
-    dedicated = each.value.ram_dedicated
+    dedicated = each.value.ram_mb
   }
 
   network_device {
     bridge      = "vmbr0"
-    mac_address = each.value.mac_address
+    model       = "virtio" # Paravirtualized driver for best performance
   }
 
+  # EFI disk (required for UEFI/OVMF)
+  efi_disk {
+    datastore_id = var.proxmox_datastore
+    file_format  = "raw"
+    type         = "4m"
+  }
+
+  # Main disk
   disk {
-    datastore_id = each.value.datastore_id
+    datastore_id = var.proxmox_datastore
     interface    = "scsi0"
     iothread     = true
-    cache        = "writethrough"
+    cache        = "writethrough" # Safe default for write cache
     discard      = "on"
     ssd          = true
-    file_format  = "raw"
-    size         = 20
-    file_id      = proxmox_virtual_environment_download_file.this["${each.value.host_node}_${each.value.update == true ? local.update_image_id : local.image_id}"].id
+    file_format  = "raw"          # Best performance
+    size         = each.value.disk_gb
+    file_id      = proxmox_virtual_environment_download_file.this.id
   }
 
   boot_order = ["scsi0"]
 
   operating_system {
-    type = "l26" # Linux Kernel 2.6 - 6.X.
+    type = "l26" # Linux Kernel 2.6 - 6.X
   }
 
-  initialization {
-    datastore_id = each.value.datastore_id
-
-    # Optional DNS Block.  Update Nodes with a list value to use.
-    dynamic "dns" {
-      for_each = try(each.value.dns, null) != null ? { "enabled" = each.value.dns } : {}
-      content {
-        servers = each.value.dns
-      }
-    }
-
-    ip_config {
-      ipv4 {
-        address = "${each.value.ip}/${var.cluster.subnet_mask}"
-        gateway = var.cluster.gateway
-      }
-    }
+  # Disable ballooning - Talos doesn't support memory hotplug
+  memory {
+    dedicated = each.value.ram_mb
   }
 
-  dynamic "hostpci" {
-    for_each = each.value.igpu ? [1] : []
-    content {
-      # Passthrough iGPU
-      device  = "hostpci0"
-      mapping = "iGPU"
-      pcie    = true
-      rombar  = true
-      xvga    = false
-    }
-  }
+  # Enable serial console for troubleshooting
+  serial_device {}
 }

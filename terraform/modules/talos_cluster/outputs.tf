@@ -1,18 +1,37 @@
-output "machine_secrets" {
-  value     = talos_machine_secrets.this.machine_secrets
-  sensitive = true
+output "talosconfig" {
+  description = "Talos client configuration for managing the cluster"
+  value       = data.talos_client_configuration.this.talos_config
+  sensitive   = true
 }
 
-output "machine_config" {
-  value = data.talos_machine_configuration.this
+output "kubeconfig" {
+  description = "Kubernetes cluster configuration"
+  value       = talos_cluster_kubeconfig.this.kubeconfig_raw
+  sensitive   = true
 }
 
-output "client_configuration" {
-  value     = data.talos_client_configuration.this
-  sensitive = true
+output "cluster_name" {
+  description = "Name of the Talos cluster"
+  value       = var.cluster.name
 }
 
-output "kube_config" {
-  value     = talos_cluster_kubeconfig.this
-  sensitive = true
+output "cluster_endpoint" {
+  description = "Kubernetes API endpoint"
+  value       = "https://${var.cluster.endpoint}"
+}
+
+output "control_plane_nodes" {
+  description = "Map of control plane node names to IP addresses"
+  value = {
+    for k, v in var.nodes : k => local.node_ips[k]
+    if v.machine_type == "controlplane"
+  }
+}
+
+output "worker_nodes" {
+  description = "Map of worker node names to IP addresses"
+  value = {
+    for k, v in var.nodes : k => local.node_ips[k]
+    if v.machine_type == "worker"
+  }
 }
