@@ -22,16 +22,9 @@ terraform/envs/
 │   ├── variables.tf      # Input variables
 │   ├── outputs.tf        # Output values
 │   └── terraform.tfvars.example
-└── cloudflared_lxc/      # Cloudflare tunnel LXC container
-    ├── main.tf           # Main configuration
-    ├── providers.tf      # Proxmox and Cloudflare providers
-    ├── variables.tf      # Input variables
-    ├── outputs.tf        # Output values
-    ├── lxc.tf            # Proxmox LXC resource
-    ├── cloudflare.tf     # Cloudflare tunnel and DNS
-    ├── locals.tf         # Computed values
-    ├── config.yaml       # cloudflared config template
-    └── terraform.tfvars.example
+└── cloudflare_ztna/      # Cloudflare ZTNA environment (Cloudflare Tunnel, DNS, Access)
+  ├── main.tf           # Main configuration (module invocation)
+  ├── providers.tf      # Cloudflare provider configuration
 ```
 
 ## k3s-single Environment
@@ -387,23 +380,17 @@ backend "s3" {
 }
 ```
 
-## cloudflared_lxc Environment
+## cloudflare_ztna Environment
 
-Deploys a cloudflared LXC container with Cloudflare tunnel integration.
+Configures Cloudflare Zero Trust resources (Cloudflare Tunnel, DNS records, and Access application/policy definitions). This environment does not provision an LXC/container or install the `cloudflared` connector; create that connector separately (for example with the Proxmox community script) and point it at the tunnel credentials managed by this environment.
 
-| Resource | Value         |
-| -------- | ------------- |
-| Type     | LXC Container |
-| CPU      | 1 core        |
-| Memory   | 512 MB        |
-| Disk     | 4 GB          |
-
-This environment also configures:
+This environment configures:
 
 - Cloudflare Tunnel
 - DNS records for proxied services
+- Access applications and policies (optional)
 
-For detailed instructions, see [cloudflared LXC](../cloudflare/cloudflared-lxc.md).
+For connector installation and container guidance, see [cloudflared LXC](../cloudflare/cloudflared-lxc.md).
 
 ## Next Steps
 

@@ -4,18 +4,17 @@ icon: material/tunnel
 
 # cloudflared LXC Deployment
 
-This guide covers deploying a cloudflared LXC container on Proxmox using Terraform, with Cloudflare tunnel and DNS configuration.
+This guide covers deploying a cloudflared LXC container on Proxmox and configuring the Cloudflare Tunnel and DNS records. In this repository Terraform/OpenTofu manages the Cloudflare resources (tunnel, DNS, and config files). The LXC itself may be created either by Terraform or installed manually — in my setup I use the Proxmox community helper script to create and install the LXC.
 
 ## Overview
 
-The `terraform/envs/cloudflared_lxc/` environment creates:
+The `terraform/envs/cloudflare_ztna/` environment configures Cloudflare Zero Trust (ZTNA) resources — Cloudflare Tunnel, DNS records, and Access policies. This environment does not provision the LXC/container running the `cloudflared` connector; that container may be created manually (for example, with the Proxmox community helper script) or with separate provisioning tooling.
 
-| Component | Description |
-|-----------|-------------|
-| Proxmox LXC | Lightweight container running cloudflared |
-| Cloudflare Tunnel | Named tunnel for secure connectivity |
-| DNS Records | CNAME records pointing to the tunnel |
-| Configuration Files | Generated config.yaml and credentials.json |
+| Component         | Description                                                                |
+| ----------------- | -------------------------------------------------------------------------- |
+| Cloudflare Tunnel | Named tunnel for secure connectivity                                       |
+| DNS Records       | CNAME records pointing to the tunnel                                       |
+| Configuration     | Cloudflare-managed tunnel configuration and Access application definitions |
 
 ## Prerequisites
 
@@ -32,8 +31,8 @@ Before deploying, ensure you have:
 
 - Cloudflare account with the domain configured
 - API token with permissions:
-    - `Zone:DNS:Edit`
-    - `Account:Cloudflare Tunnel:Edit`
+  - `Zone:DNS:Edit`
+  - `Account:Cloudflare Tunnel:Edit`
 - Account ID and Zone ID from Cloudflare dashboard
 
 ### Tools
@@ -44,16 +43,9 @@ Before deploying, ensure you have:
 ## Directory Structure
 
 ```
-terraform/envs/cloudflared_lxc/
-├── main.tf                  # Main configuration
+terraform/envs/cloudflare_ztna/
+├── main.tf                  # Main configuration (module invocation)
 ├── providers.tf             # Provider configurations
-├── variables.tf             # Input variables
-├── outputs.tf               # Output values
-├── lxc.tf                   # Proxmox LXC resource
-├── cloudflare.tf            # Cloudflare resources
-├── locals.tf                # Computed values
-├── config.yaml              # cloudflared config template
-└── terraform.tfvars.example # Example variable values
 ```
 
 ## Configuration
@@ -61,8 +53,7 @@ terraform/envs/cloudflared_lxc/
 ### Step 1: Create Variables File
 
 ```bash
-cd terraform/envs/cloudflared_lxc
-cp terraform.tfvars.example terraform.tfvars
+cd terraform/envs/cloudflare_ztna
 ```
 
 Edit `terraform.tfvars` with your values:
@@ -78,13 +69,8 @@ storage_pool   = "local-lvm"
 network_bridge = "vmbr0"
 lxc_template   = "local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
 
-# LXC Configuration
-lxc_hostname  = "cloudflared"
-lxc_cores     = 1
-lxc_memory    = 512
-lxc_disk_size = "4G"
-lxc_ip        = "10.0.10.10/24"
-lxc_gateway   = "10.0.10.1"
+# Note: LXC/container networking and host details are not managed by this environment.
+# Provision the container separately (e.g., Proxmox script) and ensure it can reach your LAN.
 
 # Cloudflare Configuration
 cloudflare_account_id = "your-account-id"
@@ -121,7 +107,7 @@ export TF_VAR_tunnel_secret="$(openssl rand -base64 32)"
 ```
 
 !!! warning "Security"
-    Never commit secrets to version control. Use environment variables or a secrets manager.
+Never commit secrets to version control. Use environment variables or a secrets manager.
 
 ### Step 3: Finding Cloudflare IDs
 
@@ -144,7 +130,7 @@ export TF_VAR_tunnel_secret="$(openssl rand -base64 32)"
 ### Initialize Terraform
 
 ```bash
-cd terraform/envs/cloudflared_lxc
+cd terraform/envs/cloudflare_ztna
 tofu init
 ```
 
@@ -156,11 +142,11 @@ tofu plan
 
 Review the planned changes:
 
-- 1 LXC container
-- 1 Cloudflare tunnel
-- 1 Cloudflare tunnel configuration
-- N DNS records (one per ingress rule)
-- 2 local files (config.yaml, credentials.json)
+- Cloudflare tunnel and associated resources
+- DNS records for configured hostnames
+- Access application and policy resources (if configured)
+
+Note: This environment does not create an LXC/container — it only manages Cloudflare-side resources.
 
 ### Apply Changes
 
@@ -172,54 +158,36 @@ Type `yes` to confirm.
 
 ## Post-Deployment Setup
 
-After Terraform creates the resources, you need to install and configure cloudflared in the LXC container.
-
-### Step 1: Install cloudflared
-
-SSH into your Proxmox host and run:
+After Terraform creates the Cloudflare resources, you still need a running `cloudflared` connector inside an LXC or VM. You can create that container manually (for example using the Proxmox community helper script):
 
 ```bash
-# Get the LXC VM ID from Terraform output
-LXC_ID=$(cd terraform/envs/cloudflared_lxc && tofu output -raw lxc_vmid)
-
-# Install dependencies
-pct exec $LXC_ID -- apt-get update
-pct exec $LXC_ID -- apt-get install -y curl gnupg2
-
-# Add Cloudflare repository
-pct exec $LXC_ID -- bash -c 'mkdir -p /usr/share/keyrings'
-pct exec $LXC_ID -- bash -c 'curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null'
-pct exec $LXC_ID -- bash -c 'echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared bookworm main" | tee /etc/apt/sources.list.d/cloudflared.list'
-
-# Install cloudflared
-pct exec $LXC_ID -- apt-get update
-pct exec $LXC_ID -- apt-get install -y cloudflared
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/cloudflared.sh)"
 ```
+
+Script documentation: https://community-scripts.github.io/ProxmoxVE/scripts?id=cloudflared
+
+Note: I modified the community script to configure a static IP and to set my LAN gateway. The `cloudflare_ztna` module does not manage container networking — ensure the connector has the correct static IP/gateway as needed.
 
 ### Step 2: Copy Configuration Files
 
-The Terraform configuration generates files in `terraform/envs/cloudflared_lxc/generated/`:
+The Terraform environment manages Cloudflare-side resources and does not create container files for you. After `tofu apply` you can obtain necessary tunnel details from Terraform outputs or from the Cloudflare Zero Trust dashboard (Tunnel ID, CNAME, and installation token). Example useful outputs:
 
 ```bash
-# Create config directory in LXC
-pct exec $LXC_ID -- mkdir -p /etc/cloudflared
+# Show available outputs
+tofu output
 
-# Copy config files (from your workstation to Proxmox, then to LXC)
-# Option 1: SCP to Proxmox, then pct push
-scp terraform/envs/cloudflared_lxc/generated/config.yaml proxmox:/tmp/
-scp terraform/envs/cloudflared_lxc/generated/credentials.json proxmox:/tmp/
-ssh proxmox "pct push $LXC_ID /tmp/config.yaml /etc/cloudflared/config.yaml"
-ssh proxmox "pct push $LXC_ID /tmp/credentials.json /etc/cloudflared/credentials.json"
-
-# Set permissions
-pct exec $LXC_ID -- chmod 600 /etc/cloudflared/credentials.json
-pct exec $LXC_ID -- chmod 644 /etc/cloudflared/config.yaml
+# Tunnel-specific outputs
+tofu output tunnel_id
+tofu output tunnel_cname
+tofu output setup_instructions
 ```
+
+Use the Cloudflare dashboard or the `setup_instructions` output to generate or retrieve the connector credentials, then place them into your container's `/etc/cloudflared/` directory as needed.
 
 ### Step 3: Start cloudflared Service
 
 ```bash
-# Enable and start the service
+# Enable and start the service inside the connector container
 pct exec $LXC_ID -- systemctl enable cloudflared
 pct exec $LXC_ID -- systemctl start cloudflared
 
@@ -331,8 +299,8 @@ After deployment, useful outputs are available:
 tofu output
 
 # Specific outputs
-tofu output lxc_vmid
 tofu output tunnel_id
+tofu output tunnel_cname
 tofu output setup_instructions
 ```
 
@@ -345,7 +313,7 @@ tofu destroy
 ```
 
 !!! warning "Data Loss"
-    This will delete the LXC container, tunnel, and DNS records. The tunnel secret will need to be regenerated for a new deployment.
+This will delete the LXC container, tunnel, and DNS records. The tunnel secret will need to be regenerated for a new deployment.
 
 ## Next Steps
 
