@@ -13,12 +13,12 @@ This homelab demonstrates **Infrastructure as Code (IaC)** principles applied to
 
 ## Documentation Sections
 
-| Section | Description |
-|---------|-------------|
-| [Talos](talos/index.md) | Immutable Kubernetes OS with API-driven management |
-| [OpenTofu](opentofu/index.md) | Provision and manage Proxmox infrastructure declaratively |
-| [K3s/Kubernetes](k3s/index.md) | Deploy and manage applications with GitOps |
-| [Proxmox](proxmox/index.md) | Configure and operate the virtualization platform |
+| Section                        | Description                                               |
+| ------------------------------ | --------------------------------------------------------- |
+| [Talos](talos/index.md)        | Immutable Kubernetes OS with API-driven management        |
+| [OpenTofu](opentofu/index.md)  | Provision and manage Proxmox infrastructure declaratively |
+| [K3s/Kubernetes](k3s/index.md) | Deploy and manage applications with GitOps                |
+| [Proxmox](proxmox/index.md)    | Configure and operate the virtualization platform         |
 
 ## Quick Links
 
