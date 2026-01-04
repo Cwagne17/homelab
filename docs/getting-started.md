@@ -55,24 +55,24 @@ curl -fsSL https://atmos.tools/install.sh | bash
 atmos version
 ```
 
-### 2. Install Packer
+### 2. Install Talos CLI
 
 **macOS (Homebrew)**
 
 ```bash
-brew install packer
+brew install siderolabs/tap/talosctl
 ```
 
 **Linux**
 
 ```bash
-# Download from https://www.packer.io/downloads
+curl -sL https://talos.dev/install | sh
 ```
 
 **Verify**
 
 ```bash
-packer version
+talosctl version
 ```
 
 ### 3. Install OpenTofu
@@ -143,47 +143,55 @@ atmos validate stacks
 
 ## Quick Deploy
 
-Deploy the entire stack:
+Deploy the Talos cluster:
 
 ```bash
-atmos workflow deploy-homelab -f stacks/workflows/deploy.yaml
+make tf-apply ENV=talos_cluster
 ```
 
 This will:
 
-1. Build a k3s-optimized AlmaLinux 9 image
-2. Provision a VM on Proxmox
-3. Bootstrap Kubernetes with Argo CD
-4. Deploy applications via GitOps
+1. Download Talos Linux image to Proxmox
+2. Provision VMs with Talos
+3. Bootstrap Kubernetes cluster
+4. Generate kubeconfig for cluster access
+
+### Export Kubeconfig
+
+```bash
+make k8s-kubeconfig
+```
 
 ## Next Steps
 
 - [Configure Proxmox](proxmox/setup.md) in detail
-- [Build custom images](packer/building.md) with Packer
-- [Deploy infrastructure](opentofu/infrastructure.md) with OpenTofu
-- [Manage Kubernetes](k3s/cluster.md) clusters
+- [Deploy Talos cluster](talos/index.md) with OpenTofu
+- [Manage infrastructure](opentofu/infrastructure.md) with OpenTofu
+- [Configure Kubernetes](k3s/cluster.md) clusters
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Packer build fails**
-
-- Check Proxmox API credentials
-- Verify network connectivity
-- Ensure sufficient storage space
-
 **OpenTofu apply fails**
 
-- Verify template exists in Proxmox
+- Verify Proxmox API credentials
 - Check VM resource availability
 - Review OpenTofu state
+- Ensure SSH access to Proxmox is configured
 
-**Kubernetes bootstrap fails**
+**Talos cluster bootstrap fails**
 
-- Verify VM is running
-- Check k3s service status
-- Review kubectl connectivity
+- Verify VMs are running
+- Check network connectivity to control plane
+- Review talosctl logs
+- Verify machine configurations were applied
+
+**Kubeconfig not working**
+
+- Ensure cluster health check passed
+- Verify control plane endpoint is reachable
+- Run `make k8s-kubeconfig` to export config
 
 ## Getting Help
 

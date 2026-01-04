@@ -1,13 +1,13 @@
 # Infrastructure Deployment
 
-This guide covers deploying Proxmox VMs and LXC containers using OpenTofu/Terraform.
+This guide covers deploying Talos Kubernetes clusters on Proxmox using OpenTofu.
 
 ## Why OpenTofu?
 
-OpenTofu (or Terraform) enables:
+OpenTofu enables:
 
 - **Declarative Infrastructure**: Define what you want, not how to build it
-- **State Management**: Track and manage infrastructure changes
+- **State Management**: Track infrastructure changes in S3
 - **Idempotent Operations**: Safe to run repeatedly
 - **Plan Before Apply**: Preview changes before making them
 
@@ -17,39 +17,39 @@ The `terraform/envs/` directory contains environment-specific configurations:
 
 ```
 terraform/envs/
-├── k3s-single/           # Single-node k3s cluster
-│   ├── main.tf           # Module invocation and provider
-│   ├── variables.tf      # Input variables
-│   ├── outputs.tf        # Output values
-│   └── terraform.tfvars.example
-└── cloudflare_ztna/      # Cloudflare ZTNA environment (Cloudflare Tunnel, DNS, Access)
-  ├── main.tf           # Main configuration (module invocation)
-  ├── providers.tf      # Cloudflare provider configuration
+├── talos_cluster/        # Talos Kubernetes cluster
+│   ├── main.tf           # Module invocation
+│   ├── providers.tf      # Provider configuration with S3 backend
+│   ├── outputs.tf        # Kubeconfig and talosconfig outputs
+│   └── terraform.auto.tfvars  # Proxmox API credentials
+└── cloudflare_ztna/      # Cloudflare ZTNA environment
+    ├── main.tf           # Cloudflare Tunnel, DNS, Access
+    └── providers.tf      # Cloudflare provider
 ```
 
-## k3s-single Environment
+## Talos Cluster Environment
 
-Deploys a single-node k3s cluster with these specs:
+Deploys a multi-node Talos Kubernetes cluster:
 
-| Resource | Value          |
-| -------- | -------------- |
-| CPU      | 4 cores        |
-| Memory   | 24 GB          |
-| Disk     | 32 GB          |
-| IP       | 10.23.45.31/24 |
+### Cluster Specifications
+
+| Node     | Role          | vCPU | RAM  | Disk  | IP          |
+| -------- | ------------- | ---- | ---- | ----- | ----------- |
+| k8s-cp00 | Control Plane | 2    | 4 GB | 20 GB | 10.23.45.30 |
+| k8s-wk00 | Worker        | 4    | 8 GB | 50 GB | 10.23.45.31 |
 
 ### Quick Start
 
 #### 1. Set Up Proxmox API Token
 
-Create the terraform user and generate an API token (in Proxmox shell):
+Create the terraform user and generate an API token:
 
 ```bash
 # Create the terraform user
 pveum user add terraform@pve
 
 # Create a custom role with required permissions
-pveum role add Terraform -privs "Datastore.AllocateSpace Datastore.Audit Datastore.AllocateTemplate Pool.Allocate SDN.Use Sys.Audit Sys.Console Sys.Modify Sys.PowerMgmt VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Cloudinit VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Migrate VM.PowerMgmt"
+pveum role add Terraform -privs "Datastore.AllocateSpace Datastore.Audit Pool.Allocate Sys.Audit Sys.Modify VM.Allocate VM.Audit VM.Clone VM.Config.CDROM VM.Config.CPU VM.Config.Disk VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options VM.Monitor VM.PowerMgmt"
 
 # Assign the role to the terraform user
 pveum aclmod / -user terraform@pve -role Terraform
@@ -58,145 +58,218 @@ pveum aclmod / -user terraform@pve -role Terraform
 pveum user token add terraform@pve terraform -privsep 0
 ```
 
-**Or regenerate if the token already exists:**
+**Configure SSH Access:**
+
+The Proxmox provider requires SSH access for image downloads:
 
 ```bash
-# Remove the old token
-pveum user token remove terraform@pve terraform
+# Generate SSH key if needed
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa_proxmox
 
-# Create a new one
-pveum user token add terraform@pve terraform -privsep 0
+# Copy to Proxmox
+ssh-copy-id -i ~/.ssh/id_rsa_proxmox root@10.23.45.10
+
+# Load key in ssh-agent
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_rsa_proxmox
 ```
 
-Copy the token output and export it:
+#### 2. Configure Credentials
+
+Create API token file:
 
 ```bash
-export TF_VAR_pm_api_token_secret="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+cat > terraform/envs/talos_cluster/terraform.auto.tfvars <<EOF
+proxmox_api_token = "root@pam!terraform=your-token-here"
+EOF
 ```
 
-#### 2. Deploy Infrastructure
+#### 3. Deploy Cluster
 
 ```bash
-cd terraform/envs/k3s-single
+cd terraform/envs/talos_cluster
 
-# Initialize
+# Initialize (sets up S3 backend)
 tofu init
 
 # Plan (review changes)
 tofu plan
 
-# Apply
+# Apply (deploy cluster)
 tofu apply
 ```
 
-### Required Variables
-
-Only one environment variable is required:
+Or use the Makefile:
 
 ```bash
-export TF_VAR_pm_api_token_secret="your-token-secret"
+make tf-apply ENV=talos_cluster
 ```
 
-All other values have sensible defaults:
+### Deployment Process
 
-- **Template**: `alma9.6-k3s-v1.31.3-k3s1-202512061542` (latest from Packer)
-- **VM IP**: `10.23.45.31/24` (Proxmox will error if already in use)
-- **Resources**: 4 cores, 24GB RAM, 32GB disk
-- **Storage**: VM disks on `vmdata`, cloned from template on `local-lvm`
+The deployment takes approximately 10-15 minutes:
 
-**SSH keys are generated automatically** and saved to `~/.ssh/{vm-name}` and `~/.ssh/{vm-name}.pub`
+1. **Initialize Backend** (~30s): Configure S3 state storage
+2. **Download Talos Image** (~2-3 min): Fetch from Talos Image Factory
+3. **Create VMs** (~1 min): Provision control plane and worker
+4. **Apply Machine Configs** (~5-7 min): Configure Talos on each node
+5. **Bootstrap Cluster** (~2-3 min): Initialize Kubernetes
+6. **Health Check** (~1 min): Verify cluster is ready
 
-### Changing the Image Version
+### Required Configuration
 
-To use a different golden image:
+**Environment Variables:**
+
+- `proxmox_api_token`: Set in `terraform.auto.tfvars`
+- `AWS_PROFILE`: Set to `chris-personal-mgmt` for S3 backend
+
+**SSH Agent:**
 
 ```bash
-tofu apply \
-  -var-file=../../globals.tfvars \
-  -var="template_name=alma9-k3-node-amd64-v1.29.0-v1"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_rsa_proxmox
 ```
 
 ### Fetching Kubeconfig
 
-After deployment, get the kubeconfig:
+After successful deployment:
 
 ```bash
-# Option 1: From Terraform output
-tofu output -raw kubeconfig_command | bash > ~/.kube/k3s-s1.yaml
+# Export kubeconfig to ~/.kube/config
+make k8s-kubeconfig
 
-# Option 2: Direct SSH
-ssh admin@10.23.45.31 'sudo cat /etc/rancher/k3s/k3s.yaml' | \
-  sed 's/127.0.0.1/10.23.45.31/g' > ~/.kube/k3s-s1.yaml
+# Or manually export
+export KUBECONFIG=$PWD/output/kubeconfig
 
-# Use the kubeconfig
-export KUBECONFIG=~/.kube/k3s-s1.yaml
+# Verify cluster
 kubectl get nodes
+```
+
+Expected output:
+
+```
+NAME       STATUS   ROLES           AGE   VERSION
+k8s-cp00   Ready    control-plane   5m    v1.34.0
+k8s-wk00   Ready    <none>          5m    v1.34.0
 ```
 
 ### Outputs
 
 After `tofu apply`, these outputs are available:
 
-| Output                 | Description                       |
-| ---------------------- | --------------------------------- |
-| `vm_id`                | Proxmox VM ID                     |
-| `vm_name`              | VM hostname                       |
-| `vm_ip`                | VM IP address                     |
-| `vm_node`              | Proxmox node hosting the VM       |
-| `ssh_private_key_path` | Path to generated SSH private key |
-| `ssh_public_key_path`  | Path to generated SSH public key  |
-| `ssh_command`          | SSH connection command (with key) |
-| `kubeconfig_command`   | Command to fetch kubeconfig       |
-| `kubectl_context`      | Setup instructions for kubectl    |
+| Output              | Description                  |
+| ------------------- | ---------------------------- |
+| `talosconfig`       | Talos client configuration   |
+| `kubeconfig`        | Kubernetes cluster access    |
+| `control_plane_ips` | Control plane node addresses |
+| `worker_ips`        | Worker node addresses        |
+| `cluster_endpoint`  | Kubernetes API endpoint      |
+
+Files are written to `output/` directory with 0600 permissions.
+
+### State Management
+
+The cluster state is stored remotely:
+
+- **Backend**: AWS S3
+- **Bucket**: `homelab-terraform-state-678730054304`
+- **Key**: `talos-cluster/terraform.tfstate`
+- **Lock Table**: `homelab-terraform-locks` (DynamoDB)
+- **Encryption**: Enabled (AES-256)
+- **Versioning**: Enabled
+
+State is automatically backed up on every change.
 
 ## Destroying Infrastructure
 
 ```bash
-cd terraform/envs/k3s-single
+cd terraform/envs/talos_cluster
 tofu destroy
+```
+
+Or:
+
+```bash
+make tf-destroy ENV=talos_cluster
 ```
 
 ## Troubleshooting
 
-### Template Not Found Error
+### SSH Connection Fails
 
-**Problem**: `Error: no guest with name 'template-name' found`
+**Problem**: `Failed to connect via SSH`
 
-**Root Cause**: The telmate/proxmox provider v3.x requires using the template's VM ID (integer) rather than the template name (string).
+**Solutions:**
 
-**Solution**:
-
-1. Find the template VM ID in Proxmox:
+1. Verify SSH key is loaded:
 
    ```bash
-   qm list | grep template-name
+   ssh-add -l
    ```
 
-2. Use the VM ID in your Terraform variable:
+2. Test SSH access:
 
-   ```hcl
-   variable "template_name" {
-     type    = number
-     default = 100  # Use the actual VM ID
-   }
+   ```bash
+   ssh root@10.23.45.10
    ```
 
-3. In the module, use `clone_id` instead of `clone`:
-   ```hcl
-   resource "proxmox_vm_qemu" "vm" {
-     clone_id   = var.template_name  # Integer VM ID
-     full_clone = true
-     # ...
-   }
+3. Ensure key is in authorized_keys:
+   ```bash
+   ssh-copy-id root@10.23.45.10
    ```
 
-**Get template ID from Packer manifest:**
+### Talos Image Download Fails
 
-```bash
-cat packer/alma9-k3s-optimized/manifest.json | jq -r '.builds[-1].artifact_id'
-```
+**Problem**: `Error downloading image from factory.talos.dev`
 
-### Insufficient Permissions Error
+**Solutions:**
+
+1. Check network connectivity from Proxmox
+2. Verify DNS resolution
+3. Check available storage space
+4. Review OpenTofu logs for specific error
+
+### Machine Config Apply Hangs
+
+**Problem**: Configuration apply times out
+
+**Solutions:**
+
+1. Verify VMs are running in Proxmox
+2. Check network connectivity to VM IPs
+3. Review Talos logs:
+   ```bash
+   talosctl -n 10.23.45.30 logs
+   ```
+
+### Bootstrap Fails
+
+**Problem**: Cluster bootstrap timeout
+
+**Solutions:**
+
+1. Verify control plane config was applied
+2. Check etcd health:
+   ```bash
+   talosctl -n 10.23.45.30 service etcd status
+   ```
+3. Review control plane logs:
+   ```bash
+   talosctl -n 10.23.45.30 logs kube-apiserver
+   ```
+
+### State Lock Error
+
+**Problem**: `Error acquiring the state lock`
+
+**Solutions:**
+
+1. Check if another OpenTofu process is running
+2. View DynamoDB lock table in AWS console
+3. Force unlock (use with caution):
+   ```bash
+   tofu force-unlock <LOCK_ID>
+   ```
 
 **Problem**: `permissions for user/token are not sufficient` or `VM.Monitor permission missing`
 

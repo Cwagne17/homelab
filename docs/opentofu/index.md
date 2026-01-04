@@ -12,15 +12,16 @@ OpenTofu manages all infrastructure in the homelab:
 
 - **Declarative Configuration**: Infrastructure defined as code
 - **Proxmox Provider**: Automated VM provisioning
-- **State Management**: Track infrastructure changes
+- **State Management**: Track infrastructure changes in S3
 - **Modular Design**: Reusable components
 
 ## Infrastructure Components
 
-- **k3s Cluster**: Single-node Kubernetes cluster
+- **Talos Cluster**: Multi-node Kubernetes cluster on Talos Linux
 - **VM Configuration**: CPU, memory, disk, networking
-- **Cloud-init**: Automated VM initialization
-- **Networking**: Static IP configuration
+- **Machine Config**: Automated Talos configuration via templates
+- **Networking**: Hybrid DHCP + static IP addressing
+- **Remote State**: S3 backend with DynamoDB locking
 
 ## Next Steps
 

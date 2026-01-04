@@ -12,20 +12,22 @@ This homelab showcases end-to-end infrastructure automation—from building VM i
 
 ```mermaid
 graph LR
-    Packer[Packer] -->|Golden Images| Proxmox[Proxmox VE]
-    Proxmox -->|VMs| K3s[K3s Cluster]
-    K3s -->|GitOps| Apps[Applications]
+    Talos[Talos Linux] -->|Kubernetes| Proxmox[Proxmox VE]
+    OpenTofu[OpenTofu] -->|Infrastructure| Proxmox
+    Proxmox -->|VMs| Cluster[Talos Cluster]
+    Cluster -->|GitOps| Apps[Applications]
 
-    style Packer fill:#E9A819,stroke:#6E5B28,stroke-width:2px,color:#071324
-    style Proxmox fill:#021C3C,stroke:#E9A819,stroke-width:2px,color:#E9A819
-    style K3s fill:#E9A819,stroke:#6E5B28,stroke-width:2px,color:#071324
+    style Talos fill:#FF6F00,stroke:#C43E00,stroke-width:2px,color:#FFFFFF
+    style OpenTofu fill:#844FBA,stroke:#5C2D91,stroke-width:2px,color:#FFFFFF
+    style Proxmox fill:#E57000,stroke:#AA5500,stroke-width:2px,color:#FFFFFF
+    style Cluster fill:#326CE5,stroke:#1A4D99,stroke-width:2px,color:#FFFFFF
     style Apps fill:#021C3C,stroke:#E9A819,stroke-width:2px,color:#E9A819
 ```
 
 ## The Stack
 
 !!! tip "Infrastructure as Code"
-**Proxmox VE** hosts everything. **Packer** builds golden images. **OpenTofu** provisions VMs. **K3s** runs containers. **Argo CD** deploys apps.
+**Proxmox VE** hosts everything. **Talos Linux** provides immutable Kubernetes. **OpenTofu** provisions VMs and configures clusters. **Argo CD** deploys apps.
 
 ## Quick Start
 
@@ -41,17 +43,17 @@ atmos workflow deploy-homelab -f stacks/workflows/deploy.yaml
 
 Open-source virtualization platform hosting all infrastructure
 
-### :material-package-variant: [Packer](packer/index.md)
-
-Automated image building with k3s pre-installed
-
 ### :material-terraform: [OpenTofu](opentofu/index.md)
 
-Infrastructure-as-code for declarative VM provisioning
+Infrastructure-as-code for declarative VM provisioning and cluster configuration
 
-### :material-kubernetes: [K3s](k3s/index.md)
+### :material-kubernetes: [Talos](talos/index.md)
 
-Lightweight Kubernetes with GitOps workflows
+Immutable, API-managed Kubernetes OS with production-grade security
+
+### :material-kubernetes: [Kubernetes](k3s/index.md)
+
+Production Kubernetes cluster with GitOps workflows
 
 ---
 
