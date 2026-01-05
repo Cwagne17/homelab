@@ -35,3 +35,13 @@ output "worker_nodes" {
     if v.machine_type == "worker"
   }
 }
+
+output "talos_schematic_id" {
+  description = "Talos Image Factory schematic ID"
+  value       = talos_image_factory_schematic.this.id
+}
+
+output "talos_version" {
+  description = "Talos version used for the cluster"
+  value       = var.cluster.talos_version
+}

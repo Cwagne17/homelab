@@ -9,6 +9,17 @@ resource "proxmox_virtual_environment_vm" "this" {
   on_boot     = true
   vm_id       = each.value.vm_id
 
+  # Lifecycle safeguards to prevent accidental VM replacement during Talos upgrades
+  lifecycle {
+    prevent_destroy = true
+
+    # Ignore changes to disk image reference - Talos upgrades should happen via talosctl,
+    # not by changing the base image in Terraform
+    ignore_changes = [
+      disk[0].file_id,
+    ]
+  }
+
   # Talos best practices for Proxmox
   machine       = "q35"             # Modern PCIe-based machine type
   scsi_hardware = "virtio-scsi-pci" # NOT virtio-scsi-single (causes bootstrap issues)
