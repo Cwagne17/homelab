@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Note: Needs to come first so the other resources can reference the project
+  - argocd-projects.yaml
+
+  # Needs to come after the project so it can reference it
+  # but before argocd-config so that TLS settings are available
+  - cert-manager.yaml
+
+  - argocd-config.yaml

@@ -1,22 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cert-manager
+  name: argocd-config
   namespace: argocd
 spec:
+  # IMPORTANT: keep this as default so it doesn't depend on AppProjects
   project: default
-  sources:
-    - repoURL: https://charts.jetstack.io
-      chart: cert-manager
-      targetRevision: v1.19.2
-      helm:
-        releaseName: cert-manager
-        parameters:
-          - name: crds.enabled
-            value: "true"
+  source:
+    repoURL: https://github.com/Cwagne17/homelab
+    targetRevision: main
+    path: k8s/base/infra/argocd-config
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
