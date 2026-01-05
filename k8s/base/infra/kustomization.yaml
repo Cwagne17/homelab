@@ -9,4 +9,9 @@ resources:
   # but before argocd-config so that TLS settings are available
   - cert-manager.yaml
 
+  # Install MetalLB before anything that needs LoadBalancer services
+  # or static IPs from a LAN IP pool
+  - metallb.yaml
+  - metallb-config.yaml
+
   - argocd-config.yaml
