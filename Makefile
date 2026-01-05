@@ -12,7 +12,7 @@
 # =============================================================================
 
 .PHONY: help packer tf-init tf-plan tf-apply tf-destroy \
-        k8s-dev-start k8s-dev-stop k8s-dev-deploy k8s-dev-argocd \
+        k8s-dev-start k8s-dev-stop k8s-dev-deploy k8s-argocd \
         k8s-bootstrap argo k8s-diff k8s-kubeconfig \
         preflight clean \
         docs docs-build docs-clean
@@ -65,7 +65,7 @@ help:
 	@echo "  k8s-dev-start   - Create local kind cluster for development"
 	@echo "  k8s-dev-stop    - Delete local kind cluster"
 	@echo "  k8s-dev-deploy  - Deploy dev overlay to kind cluster"
-	@echo "  k8s-dev-argocd  - Access Argo CD UI on kind cluster"
+	@echo "  k8s-argocd  - Access Argo CD UI on kind cluster"
 	@echo "  k8s-kubeconfig  - Export Talos cluster kubeconfig to ~/.kube/config"
 	@echo "  argo            - Apply app-of-apps root application"
 	@echo "  k8s-diff        - Show diff of Kubernetes manifests"
@@ -171,11 +171,7 @@ k8s-dev-stop:
 	@echo "==> Stopping local development cluster..."
 	kind delete cluster --name homelab-dev
 
-k8s-dev-deploy:
-	@echo "==> Deploying dev apps to local cluster..."
-	kubectl apply -k $(K8S_DIR)/overlays/dev
-
-k8s-dev-argocd:
+k8s-argocd:
 	@echo "==> Accessing ArgoCD UI..."
 	@echo "Getting admin password..."
 	@kubectl -n argocd get secret argocd-initial-admin-secret \
@@ -185,10 +181,6 @@ k8s-dev-argocd:
 	@echo "Access UI at: https://localhost:8080"
 	@echo "Username: admin"
 	kubectl port-forward svc/argocd-server -n argocd 8080:443
-
-k8s-bootstrap:
-	@echo "==> Applying bootstrap manifests (Argo CD)..."
-	kubectl apply -k $(K8S_DIR)/bootstrap
 
 argo:
 	@echo "==> Applying app-of-apps root application..."
