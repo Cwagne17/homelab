@@ -3,18 +3,6 @@ kind: Kustomization
 
 namespace: argocd
 
-patches:
-  - target:
-      kind: ConfigMap
-      name: argocd-cm
-      patch: |-
-        - op: add
-          path: data.url
-          value: https://argocd.chriswagner.dev
-  - target:
-      kind: Service
-      name: argocd-server
-      patch: |-
-        - op: add
-          path: spec.loadBalancerIP
-          value: 10.23.45.240
+resources:
+  - argocd-cm.yaml
+  - argocd-server.yaml
