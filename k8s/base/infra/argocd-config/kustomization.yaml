@@ -4,5 +4,6 @@ kind: Kustomization
 namespace: argocd
 
 resources:
-  - argocd-cm.yaml
-  - argocd-server.yaml
+  []
+  # - argocd-cm.yaml
+  # - argocd-server.yaml

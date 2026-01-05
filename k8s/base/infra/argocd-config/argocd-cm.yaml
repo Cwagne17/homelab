@@ -3,7 +3,5 @@ kind: ConfigMap
 metadata:
   name: argocd-cm
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-options: ServerSideApply=true
 data:
   url: https://argocd.chriswagner.dev
