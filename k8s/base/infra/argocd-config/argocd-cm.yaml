@@ -5,3 +5,5 @@ metadata:
   namespace: argocd
 data:
   url: https://argocd.chriswagner.dev
+  # Allow application status updates without full sync
+  application.instanceLabelKey: argocd.argoproj.io/instance
