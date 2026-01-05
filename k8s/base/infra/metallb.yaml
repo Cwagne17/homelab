@@ -11,14 +11,21 @@ spec:
     targetRevision: v0.15.3
     helm:
       releaseName: metallb
-
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: metallb-system
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/enforce-version: latest
+        pod-security.kubernetes.io/audit: privileged
+        pod-security.kubernetes.io/audit-version: latest
+        pod-security.kubernetes.io/warn: privileged
+        pod-security.kubernetes.io/warn-version: latest
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
