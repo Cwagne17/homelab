@@ -3,6 +3,12 @@ kind: Kustomization
 
 namespace: argocd
 
-resources:
-  - argocd-cm.yaml
-  - argocd-server.yaml
+patches:
+  - path: argocd-cm.yaml
+    target:
+      kind: ConfigMap
+      name: argocd-cm
+  - path: argocd-server.yaml
+    target:
+      kind: Service
+      name: argocd-server
