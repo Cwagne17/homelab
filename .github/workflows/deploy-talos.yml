@@ -1,0 +1,86 @@
+name: Deploy Homelab Infrastructure
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Install OpenVPN
+        run: |
+          sudo apt update
+          sudo apt install -y openvpn openvpn-systemd-resolved
+
+      - name: Connect to VPN
+        uses: kota65535/github-openvpn-connect-action@v2
+        with:
+          config_file: .github/workflows/client.ovpn
+          client_key: ${{ secrets.CLIENT_OVPN_KEY }}
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.10.6
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Install talosctl
+        run: |
+          curl -sL https://talos.dev/install | sh
+
+      - name: Terraform Init
+        working-directory: terraform/envs/talos_cluster
+        run: tofu init
+
+      - name: Terraform Plan
+        working-directory: terraform/envs/talos_cluster
+        run: tofu plan
+
+      - name: Terraform Apply
+        working-directory: terraform/envs/talos_cluster
+        run: tofu apply -auto-approve
+
+      - name: Export Talos Config
+        working-directory: terraform/envs/talos_cluster
+        run: |
+          mkdir -p ~/.talos
+          tofu output -raw talosconfig > ~/.talos/config
+          export TALOSCONFIG=~/.talos/config
+          echo "TALOSCONFIG=$TALOSCONFIG" >> $GITHUB_ENV
+
+      - name: Export Kubeconfig
+        working-directory: terraform/envs/talos_cluster
+        run: |
+          mkdir -p ~/.kube
+          tofu output -raw kubeconfig > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify Cluster Access
+        run: |
+          kubectl get nodes
+          kubectl get pods -A
+
+      - name: Upgrade Talos Nodes
+        run: |
+          chmod +x scripts/talos-upgrade.sh
+          ./scripts/talos-upgrade.sh || echo "No Talos upgrades needed or upgrade failed"

@@ -57,13 +57,18 @@ if [ -n "$WORKER_NODES" ]; then
     echo ""
 fi
 
-# Confirm upgrade
-echo "⚠️  This will upgrade all nodes to: $IMAGE"
-read -p "Continue? [y/N] " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 0
+# Check if running in CI or if AUTO_APPROVE is set
+if [ "${CI:-false}" = "true" ] || [ "${AUTO_APPROVE:-false}" = "true" ]; then
+    echo "🤖 Running in CI mode - auto-approving upgrade"
+else
+    # Confirm upgrade interactively
+    echo "⚠️  This will upgrade all nodes to: $IMAGE"
+    read -p "Continue? [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 0
+    fi
 fi
 
 export TALOSCONFIG="$(pwd)/output/talosconfig"
