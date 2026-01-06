@@ -32,9 +32,4 @@ provider "proxmox" {
   insecure = true
 
   api_token = var.proxmox_api_token
-
-  ssh {
-    agent       = true
-    username    = "root"
-  }
 }
