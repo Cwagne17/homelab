@@ -6,11 +6,11 @@ metadata:
 spec:
   project: infra
   source:
-    - repoURL: https://charts.longhorn.io
-      chart: longhorn
-      targetRevision: v1.10.1
-      helm:
-        releaseName: longhorn
+    repoURL: https://charts.longhorn.io
+    chart: longhorn
+    targetRevision: v1.7.2
+    helm:
+      releaseName: longhorn
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system
