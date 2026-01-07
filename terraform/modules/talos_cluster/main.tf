@@ -40,6 +40,16 @@ data "talos_machine_configuration" "this" {
         network = {
           hostname = each.key
         }
+        kubelet = {
+          extraMounts = [
+            {
+              destination = "/var/lib/longhorn"
+              type        = "bind"
+              source      = "/var/lib/longhorn"
+              options     = ["bind", "rshared", "rw"]
+            }
+          ]
+        }
       }
     })
   ]
