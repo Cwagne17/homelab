@@ -14,4 +14,6 @@ resources:
   - metallb.yaml
   - metallb-config.yaml
 
+  # Storage providers
+  - csi-driver-nfs.yaml
   - longhorn.yaml

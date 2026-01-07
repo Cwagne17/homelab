@@ -9,7 +9,6 @@ module "talos_cluster" {
 
   cluster = {
     name            = "homelab-k8s"
-    endpoint        = "10.23.45.30:6443" # Control plane IP or DNS name with port
     talos_version   = "v1.11.5"
     proxmox_cluster = "homelab"
   }
@@ -21,7 +20,7 @@ module "talos_cluster" {
       cpu          = 2
       memory       = 4096
       disk_size    = 20
-      private_ip   = "10.23.45.30/24"
+      mac_address  = "BC:24:11:2E:C0:00"
     }
 
     "k8s-wk00.home.arpa" = {
@@ -30,7 +29,7 @@ module "talos_cluster" {
       cpu          = 4
       memory       = 8192
       disk_size    = 50
-      private_ip   = "10.23.45.31/24"
+      mac_address  = "BC:24:11:2E:C0:01"
     }
   }
 }

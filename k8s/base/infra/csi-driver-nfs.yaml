@@ -5,12 +5,12 @@ metadata:
   namespace: argocd
 spec:
   project: infra
-  sources:
-    - repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
-      chart: csi-driver-nfs
-      targetRevision: 4.12.0
-      helm:
-        releaseName: csi-driver-nfs
+  source:
+    repoURL: https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts
+    chart: csi-driver-nfs
+    targetRevision: v4.9.0
+    helm:
+      releaseName: csi-driver-nfs
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system

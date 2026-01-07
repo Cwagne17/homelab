@@ -23,6 +23,10 @@ terraform {
       source  = "hashicorp/local"
       version = ">= 2.4.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.9.0"
+    }
   }
 }
 
@@ -32,4 +36,9 @@ provider "proxmox" {
   insecure = true
 
   api_token = var.proxmox_api_token
+  
+  ssh {
+    agent    = true
+    username = "root"
+  }
 }

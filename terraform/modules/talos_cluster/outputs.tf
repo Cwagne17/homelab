@@ -17,23 +17,17 @@ output "cluster_name" {
 
 output "cluster_endpoint" {
   description = "Kubernetes API endpoint"
-  value       = "https://${var.cluster.endpoint}"
+  value       = "https://${local.control_plane_ip}:6443"
 }
 
 output "control_plane_nodes" {
-  description = "Map of control plane node names to IP addresses"
-  value = {
-    for k, v in var.nodes : k => local.node_ips[k]
-    if v.machine_type == "controlplane"
-  }
+  description = "List of control plane node IP addresses"
+  value       = [local.control_plane_ip]
 }
 
 output "worker_nodes" {
-  description = "Map of worker node names to IP addresses"
-  value = {
-    for k, v in var.nodes : k => local.node_ips[k]
-    if v.machine_type == "worker"
-  }
+  description = "List of worker node IP addresses"
+  value       = compact([for k, v in var.nodes : local.get_dhcp_ip[k] if v.machine_type == "worker"])
 }
 
 output "talos_schematic_id" {
@@ -44,4 +38,16 @@ output "talos_schematic_id" {
 output "talos_version" {
   description = "Talos version used for the cluster"
   value       = var.cluster.talos_version
+}
+
+output "node_details" {
+  description = "Detailed node information including hostname, IP address, MAC address, and machine type"
+  value = {
+    for k, v in var.nodes : k => {
+      hostname     = k
+      ip_address   = coalesce(local.get_dhcp_ip[k], "pending")
+      mac_address  = v.mac_address
+      machine_type = v.machine_type
+    }
+  }
 }

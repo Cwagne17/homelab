@@ -3,6 +3,7 @@
 
 ENV ?= talos_cluster
 TF_DIR := terraform/envs/$(ENV)
+TF_CMD := tofu
 
 help:
 	@echo "Homelab Makefile"
@@ -27,24 +28,25 @@ help:
 
 # Terraform
 tf-init:
-	@cd $(TF_DIR) && terraform init
+	@cd $(TF_DIR) && $(TF_CMD) init
 
 tf-plan:
-	@cd $(TF_DIR) && terraform plan
+	@cd $(TF_DIR) && $(TF_CMD) plan
 
 tf-apply:
-	@cd $(TF_DIR) && terraform apply
+	@cd $(TF_DIR) && $(TF_CMD) apply
 
 # Kubernetes
 kubeconfig:
-	@KUBECONFIG_SRC=$(TF_DIR)/output/kubeconfig; \
-	KUBECONFIG_DST=$$HOME/.kube/config; \
-	if [ ! -f "$$KUBECONFIG_SRC" ]; then \
-		echo "❌ Kubeconfig not found at $$KUBECONFIG_SRC"; \
-		echo "Run 'make tf-apply' first"; \
-		exit 1; \
-	fi; \
-	mkdir -p $$HOME/.kube; \
+	@echo "Extracting configs from Talos cluster..."; \
+	cd $(TF_DIR) && \
+	mkdir -p output && \
+	$(TF_CMD) output -raw talosconfig > output/talosconfig && chmod 600 output/talosconfig && \
+	CONTROL_PLANE_IP=$$($(TF_CMD) output -json control_plane_nodes | jq -r '.[0]') && \
+	talosctl --talosconfig=output/talosconfig --nodes=$$CONTROL_PLANE_IP kubeconfig output/kubeconfig --force && \
+	KUBECONFIG_SRC=$$(pwd)/output/kubeconfig && \
+	KUBECONFIG_DST=$$HOME/.kube/config && \
+	mkdir -p $$HOME/.kube && \
 	if [ -f "$$KUBECONFIG_DST" ]; then \
 		cp "$$KUBECONFIG_DST" "$$KUBECONFIG_DST.backup"; \
 		KUBECONFIG="$$KUBECONFIG_DST:$$KUBECONFIG_SRC" kubectl config view --flatten > "$$KUBECONFIG_DST.tmp"; \
@@ -55,7 +57,7 @@ kubeconfig:
 		cp "$$KUBECONFIG_SRC" "$$KUBECONFIG_DST"; \
 		chmod 600 "$$KUBECONFIG_DST"; \
 		echo "✅ Kubeconfig exported"; \
-	fi; \
+	fi && \
 	echo "Current context: $$(kubectl config current-context)"
 
 argocd:

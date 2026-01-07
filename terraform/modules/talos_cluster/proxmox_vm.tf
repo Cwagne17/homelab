@@ -11,7 +11,7 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   # Lifecycle safeguards to prevent accidental VM replacement during Talos upgrades
   lifecycle {
-    prevent_destroy = true
+    # prevent_destroy = true  # Temporarily disabled to fix worker node
 
     # Ignore changes to disk image reference - Talos upgrades should happen via talosctl,
     # not by changing the base image in Terraform
@@ -40,8 +40,9 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   network_device {
-    bridge = "vmbr0"
-    model  = "virtio" # Paravirtualized driver for best performance
+    bridge      = "vmbr0"
+    model       = "virtio"
+    mac_address = each.value.mac_address
   }
 
   # EFI disk (required for UEFI/OVMF)
