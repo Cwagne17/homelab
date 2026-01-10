@@ -11,19 +11,36 @@ spec:
       targetRevision: 2.7.0
       helm:
         releaseName: jellyfin
-        parameters:
-          - name: service.type
-            value: LoadBalancer
-          - name: service.loadBalancerIP
-            value: 10.23.45.241
-          - name: persistence.media.existingClaim
-            value: jellyfin-media-pvc
-          - name: podSecurityContext.fsGroup
-            value: "3001"
-          - name: podSecurityContext.runAsUser
-            value: "1001"
-          - name: podSecurityContext.runAsGroup
-            value: "3001"
+        values: |
+          service:
+            type: LoadBalancer
+            loadBalancerIP: 10.23.45.241
+
+          # Use an existing PVC for config (optional: set this if you created it)
+          persistence:
+            config:
+              enabled: true
+              existingClaim: jellyfin-config
+            # disable the chart's auto media PVC; we'll mount our own below
+            media:
+              enabled: false
+
+          # Mount a static PVC at /media
+          volumes:
+            - name: media
+              persistentVolumeClaim:
+                claimName: jellyfin-media
+          volumeMounts:
+            - name: media
+              mountPath: /media
+              readOnly: false
+
+          # Run as your jellyfin:media service account
+          podSecurityContext:
+            fsGroup: 3001
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 3001
   destination:
     server: https://kubernetes.default.svc
     namespace: jellyfin
