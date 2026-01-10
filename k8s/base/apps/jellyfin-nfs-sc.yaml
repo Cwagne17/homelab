@@ -8,7 +8,7 @@ metadata:
 provisioner: nfs.csi.k8s.io
 allowVolumeExpansion: true
 parameters:
-  server: 10.23.45.21
+  server: 10.23.45.121
   share: /mnt/tank/media
 mountOptions:
   - nfsvers=4.1
