@@ -2,7 +2,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: nfs-truenas-media
+  name: truenas-nfs-sc
   annotations:
     argocd.argoproj.io/tracking-id: jellyfin:/StorageClass/:jellyfin/nfs-truenas-media
 provisioner: nfs.csi.k8s.io

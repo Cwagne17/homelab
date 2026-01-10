@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jellyfin-media-nfs
+  name: jellyfin-media-pvc
   namespace: jellyfin
   annotations:
     argocd.argoproj.io/tracking-id: jellyfin:/PersistentVolumeClaim/:jellyfin/jellyfin-media-nfs
 spec:
   accessModes: ["ReadWriteMany"]
-  storageClassName: nfs-truenas-media
+  storageClassName: truenas-nfs-sc
   resources:
     requests:
       storage: 500Gi
