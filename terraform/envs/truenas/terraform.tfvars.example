@@ -1,0 +1,24 @@
+# TrueNAS SCALE VM Configuration Example
+# Copy this file to terraform.tfvars and adjust values as needed
+
+# Required: Proxmox node name
+node = "pve"
+
+# Required: VM ID
+vmid = 900
+
+# Required: Passthrough disk paths (use /dev/disk/by-id for stability)
+passthrough_disk1_by_id = "/dev/disk/by-id/ata-WDC_WD60EFPX-68C5ZN0_WD-WX22DA5CFRHD"
+passthrough_disk2_by_id = "/dev/disk/by-id/ata-WDC_WD60EFPX-68C5ZN0_WD-WX22DA54007K"
+
+# Optional: Override defaults if needed
+# vm_name      = "truenas.home.arpa"
+# memory_mb    = 8192
+# cores        = 2
+# sockets      = 1
+# cpu_type     = "host"
+# os_disk_gb   = 32
+# truenas_iso  = "TrueNAS-SCALE-25.10.1.iso"
+# bridge       = "vmbr0"
+# macaddr      = "02:23:45:21:9A:7C"
+# tags         = ["truenas", "nfs", "storage"]
