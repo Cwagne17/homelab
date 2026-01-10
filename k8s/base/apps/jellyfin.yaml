@@ -16,6 +16,8 @@ spec:
             value: LoadBalancer
           - name: service.loadBalancerIP
             value: 10.23.45.241
+          - name: persistence.media.storageClass
+            value: nfs-truenas-media
   destination:
     server: https://kubernetes.default.svc
     namespace: jellyfin
