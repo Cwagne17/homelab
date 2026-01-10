@@ -106,7 +106,7 @@ After Terraform creates the VM:
 
 3. **Initial TrueNAS Configuration**:
    - Access TrueNAS web UI at the IP assigned by DHCP (check your router/DHCP server)
-   - The VM uses MAC address `02:23:45:21:9A:7C` - you can create a DHCP reservation
+   - The VM uses MAC address `02:23:45:21:9a:7c` - you can create a DHCP reservation
    - Complete the setup wizard
    - Configure your admin password and network settings
 
@@ -130,7 +130,7 @@ All variables are defined in `variables.tf` with sensible defaults. The most com
 | `cores` | `2` | CPU cores |
 | `passthrough_disk1_by_id` | (required) | Path to first passthrough disk |
 | `passthrough_disk2_by_id` | (required) | Path to second passthrough disk |
-| `macaddr` | `02:23:45:21:9A:7C` | VM MAC address |
+| `macaddr` | `02:23:45:21:9a:7c` | VM MAC address |
 
 See `variables.tf` for the complete list and `terraform.tfvars.example` for examples.
 
@@ -161,7 +161,7 @@ See `variables.tf` for the complete list and `terraform.tfvars.example` for exam
 
 ### Can't Find VM IP Address
 
-- Check your router/DHCP server for the MAC address `02:23:45:21:9A:7C`
+- Check your router/DHCP server for the MAC address `02:23:45:21:9a:7c`
 - Use Proxmox VM console to check TrueNAS network settings
 - Create a DHCP reservation for stable IP addressing
 

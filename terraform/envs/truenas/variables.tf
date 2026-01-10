@@ -103,7 +103,7 @@ variable "bridge" {
 variable "macaddr" {
   description = "MAC address for the VM network interface"
   type        = string
-  default     = "02:23:45:21:9A:7C"
+  default     = "02:23:45:21:9a:7c"
 }
 
 variable "firewall" {

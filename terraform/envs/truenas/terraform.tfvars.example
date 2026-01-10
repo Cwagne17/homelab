@@ -20,5 +20,5 @@ passthrough_disk2_by_id = "/dev/disk/by-id/ata-WDC_WD60EFPX-68C5ZN0_WD-WX22DA540
 # os_disk_gb   = 32
 # truenas_iso  = "TrueNAS-SCALE-25.10.1.iso"
 # bridge       = "vmbr0"
-# macaddr      = "02:23:45:21:9A:7C"
+# macaddr      = "02:23:45:21:9a:7c"
 # tags         = ["truenas", "nfs", "storage"]

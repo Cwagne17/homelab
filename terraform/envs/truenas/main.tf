@@ -22,8 +22,8 @@ resource "proxmox_virtual_environment_vm" "truenas" {
   tags        = var.tags
   description = "TrueNAS SCALE storage server"
 
-  bios    = "ovmf"
-  machine = "q35"
+  bios          = "ovmf"
+  machine       = "q35"
   scsi_hardware = "virtio-scsi-single"
 
   cpu {
@@ -41,11 +41,9 @@ resource "proxmox_virtual_environment_vm" "truenas" {
 
   # EFI disk for UEFI boot with Secure Boot support
   efi_disk {
-    datastore_id = var.system_storage
-    file_format  = "raw"
-    type         = "4m"
-    # TODO: Verify if pre_enrolled_keys option is available in provider version >= 0.70.0
-    # For Secure Boot, enable MS certificates and pre-enrolled keys
+    datastore_id      = var.system_storage
+    file_format       = "raw"
+    type              = "4m"
     pre_enrolled_keys = true
   }
 
@@ -69,32 +67,32 @@ resource "proxmox_virtual_environment_vm" "truenas" {
 
   # Passthrough disk 1 - WD 6TB drive
   disk {
-    interface  = "scsi1"
-    file_id    = var.passthrough_disk1_by_id
-    iothread   = true
-    discard    = "on"
-    ssd        = false
-    cache      = "none"
-    aio        = "native"
+    interface = "scsi1"
+    file_id   = var.passthrough_disk1_by_id
+    iothread  = true
+    discard   = "on"
+    ssd       = false
+    cache     = "none"
+    aio       = "native"
   }
 
   # Passthrough disk 2 - WD 6TB drive
   disk {
-    interface  = "scsi2"
-    file_id    = var.passthrough_disk2_by_id
-    iothread   = true
-    discard    = "on"
-    ssd        = false
-    cache      = "none"
-    aio        = "native"
+    interface = "scsi2"
+    file_id   = var.passthrough_disk2_by_id
+    iothread  = true
+    discard   = "on"
+    ssd       = false
+    cache     = "none"
+    aio       = "native"
   }
 
   # Network interface
   network_device {
-    bridge   = var.bridge
+    bridge      = var.bridge
     mac_address = var.macaddr
-    firewall = var.firewall
-    model    = "virtio"
+    firewall    = var.firewall
+    model       = "virtio"
   }
 
   lifecycle {
