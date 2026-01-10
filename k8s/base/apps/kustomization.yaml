@@ -3,4 +3,5 @@ kind: Kustomization
 
 resources:
   - jellyfin-nfs-sc.yaml
+  - jellyfin-media-pvc.yaml
   - jellyfin.yaml

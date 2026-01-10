@@ -4,14 +4,11 @@ kind: StorageClass
 metadata:
   name: nfs-truenas-media
 provisioner: nfs.csi.k8s.io
+allowVolumeExpansion: true
 parameters:
   server: 10.23.45.21
   share: /mnt/tank/media
 mountOptions:
   - nfsvers=3
-  - rsize=131072
-  - wsize=131072
-  - hard
-  - timeo=600
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
