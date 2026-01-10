@@ -17,7 +17,13 @@ spec:
           - name: service.loadBalancerIP
             value: 10.23.45.241
           - name: persistence.media.existingClaim
-            value: jellyfin-media-nfs
+            value: jellyfin-media-pvc
+          - name: podSecurityContext.fsGroup
+            value: "3001"
+          - name: podSecurityContext.runAsUser
+            value: "1001"
+          - name: podSecurityContext.runAsGroup
+            value: "3001"
   destination:
     server: https://kubernetes.default.svc
     namespace: jellyfin

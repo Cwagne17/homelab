@@ -13,9 +13,5 @@ parameters:
 mountOptions:
   - nfsvers=4.1
   - sec=sys
-  - rsize=1048576
-  - wsize=1048576
-  - hard
-  - timeo=600
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
