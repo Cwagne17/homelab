@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pihole
+  namespace: argocd
+spec:
+  project: infra
+  source:
+    repoURL: https://mojo2600.github.io/pihole-kubernetes
+    chart: pihole
+    targetRevision: 2.35.0
+    helm:
+      releaseName: pihole
+      values: |
+        serviceDns:
+          type: LoadBalancer
+          loadBalancerIP: 10.23.45.253
+        serviceWeb:
+          type: LoadBalancer
+          loadBalancerIP: 10.23.45.254
+
+        # Admin password - change this!
+        adminPassword: "changeme"
+
+        persistentVolumeClaim:
+          enabled: true
+
+        DNS1: "1.1.1.1"
+        DNS2: "1.0.0.1"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        istio-injection: enabled
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/audit: privileged
+        pod-security.kubernetes.io/warn: privileged
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
