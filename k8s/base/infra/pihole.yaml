@@ -14,10 +14,10 @@ spec:
       values: |
         serviceDns:
           type: LoadBalancer
-          loadBalancerIP: 10.23.45.253
+          loadBalancerIP: 10.23.45.242
         serviceWeb:
           type: LoadBalancer
-          loadBalancerIP: 10.23.45.254
+          loadBalancerIP: 10.23.45.243
 
         # Admin password - change this!
         adminPassword: "changeme"
