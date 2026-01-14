@@ -21,10 +21,6 @@ spec:
           - name: EXTERNAL_DNS_PIHOLE_PASSWORD
             value: "changeme"
 
-        # Use Pi-hole API v6
-        extraArgs:
-          - --pihole-api-version=6
-
         # Only process LoadBalancer services
         sources:
           - service
