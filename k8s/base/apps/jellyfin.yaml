@@ -21,19 +21,10 @@ spec:
             config:
               enabled: true
               existingClaim: jellyfin-config
-            # disable the chart's auto media PVC; we'll mount our own below
+            # Use existing PVC for media
             media:
-              enabled: false
-
-          # Mount a static PVC at /media using extraVolumes
-          extraVolumes:
-            - name: media
-              persistentVolumeClaim:
-                claimName: jellyfin-media-pvc
-          extraVolumeMounts:
-            - name: media
-              mountPath: /media
-              readOnly: false
+              enabled: true
+              existingClaim: jellyfin-media-pvc
 
           # Run as your jellyfin:media service account
           podSecurityContext:
