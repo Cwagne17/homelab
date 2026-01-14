@@ -5,32 +5,32 @@ metadata:
   namespace: argocd
 spec:
   project: apps
-  sources:
-    - repoURL: https://jellyfin.github.io/jellyfin-helm
-      chart: jellyfin
-      targetRevision: 2.7.0
-      helm:
-        releaseName: jellyfin
-        values: |
-          service:
-            type: LoadBalancer
-            loadBalancerIP: 10.23.45.241
+  source:
+    repoURL: https://jellyfin.github.io/jellyfin-helm
+    chart: jellyfin
+    targetRevision: 2.7.0
+    helm:
+      releaseName: jellyfin
+      values: |
+        service:
+          type: LoadBalancer
+          loadBalancerIP: 10.23.45.241
 
-          # Let the chart manage config storage
-          persistence:
-            config:
-              enabled: true
-            # Use existing PVC for media
-            media:
-              enabled: true
-              existingClaim: jellyfin-media-pvc
+        # Let the chart manage config storage
+        persistence:
+          config:
+            enabled: true
+          # Use existing PVC for media
+          media:
+            enabled: true
+            existingClaim: jellyfin-media-pvc
 
-          # Run as your jellyfin:media service account
-          podSecurityContext:
-            fsGroup: 3001
-          securityContext:
-            runAsUser: 1001
-            runAsGroup: 3001
+        # Run as your jellyfin:media service account
+        podSecurityContext:
+          fsGroup: 3001
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 3001
   destination:
     server: https://kubernetes.default.svc
     namespace: jellyfin
@@ -38,6 +38,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    managedNamespaceMetadata:
+      labels:
+        istio-injection: enabled
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

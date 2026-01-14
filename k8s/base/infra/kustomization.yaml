@@ -19,4 +19,5 @@ resources:
   - metallb-config.yaml
 
   # Storage providers
+  - longhorn-namespace.yaml
   - longhorn.yaml
