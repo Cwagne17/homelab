@@ -8,6 +8,7 @@ spec:
     storage: 1Ti
   accessModes: ["ReadWriteMany"]
   persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
   nfs:
     server: 10.23.45.121
     path: /mnt/tank/media
@@ -21,7 +22,8 @@ metadata:
     argocd.argoproj.io/tracking-id: jellyfin:/PersistentVolumeClaim/:jellyfin/jellyfin-media-pvc
 spec:
   accessModes: ["ReadWriteMany"]
-  storageClassName: truenas-nfs-sc
+  storageClassName: ""
+  volumeName: jellyfin-media-pv
   resources:
     requests:
       storage: 500Gi

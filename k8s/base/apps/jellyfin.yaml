@@ -29,7 +29,7 @@ spec:
           volumes:
             - name: media
               persistentVolumeClaim:
-                claimName: jellyfin-media
+                claimName: jellyfin-media-pvc
           volumeMounts:
             - name: media
               mountPath: /media
