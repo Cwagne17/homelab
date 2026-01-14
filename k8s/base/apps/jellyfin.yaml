@@ -16,11 +16,10 @@ spec:
             type: LoadBalancer
             loadBalancerIP: 10.23.45.241
 
-          # Use an existing PVC for config (optional: set this if you created it)
+          # Let the chart manage config storage
           persistence:
             config:
               enabled: true
-              existingClaim: jellyfin-config
             # Use existing PVC for media
             media:
               enabled: true
