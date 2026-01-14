@@ -24,6 +24,10 @@ spec:
         # Admin password - change this!
         adminPassword: "changeme"
 
+        # Disable Istio injection for Pi-hole pod
+        podAnnotations:
+          sidecar.istio.io/inject: "false"
+
         persistentVolumeClaim:
           enabled: true
 
