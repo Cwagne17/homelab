@@ -25,12 +25,12 @@ spec:
             media:
               enabled: false
 
-          # Mount a static PVC at /media
-          volumes:
+          # Mount a static PVC at /media using extraVolumes
+          extraVolumes:
             - name: media
               persistentVolumeClaim:
                 claimName: jellyfin-media-pvc
-          volumeMounts:
+          extraVolumeMounts:
             - name: media
               mountPath: /media
               readOnly: false
