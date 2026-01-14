@@ -8,15 +8,10 @@ spec:
   source:
     repoURL: https://mojo2600.github.io/pihole-kubernetes
     chart: pihole
-    targetRevision: 2.35.0
+    targetRevision: 2.27.0
     helm:
       releaseName: pihole
       values: |
-        # Use Pi-hole v5.18.3 image for external-dns compatibility
-        image:
-          repository: pihole/pihole
-          tag: "2024.07.0"
-
         serviceDns:
           type: LoadBalancer
           loadBalancerIP: 10.23.45.242
@@ -32,21 +27,6 @@ spec:
         # Disable Istio injection for Pi-hole pod
         podAnnotations:
           sidecar.istio.io/inject: "false"
-
-        # Override probes for Pi-hole v5 compatibility
-        probes:
-          liveness:
-            enabled: true
-            initialDelaySeconds: 60
-            failureThreshold: 10
-            timeoutSeconds: 5
-            scheme: HTTP
-          readiness:
-            enabled: true
-            initialDelaySeconds: 60
-            failureThreshold: 10
-            timeoutSeconds: 5
-            scheme: HTTP
 
         persistentVolumeClaim:
           enabled: true
