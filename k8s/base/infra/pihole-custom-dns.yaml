@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pihole-custom-dns
+  namespace: pihole
+data:
+  # Custom DNS entries for infrastructure not in the cluster
+  02-custom.conf: |
+    # Proxmox
+    address=/proxmox.home.arpa/10.23.45.10
+
+    # TrueNAS
+    address=/truenas.home.arpa/10.23.45.121

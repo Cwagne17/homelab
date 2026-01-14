@@ -31,6 +31,16 @@ spec:
         persistentVolumeClaim:
           enabled: true
 
+        # Custom DNS entries from ConfigMap
+        extraVolumes:
+          - name: custom-dns
+            configMap:
+              name: pihole-custom-dns
+        extraVolumeMounts:
+          - name: custom-dns
+            mountPath: /etc/dnsmasq.d/02-custom.conf
+            subPath: 02-custom.conf
+
         DNS1: "1.1.1.1"
         DNS2: "1.0.0.1"
   destination:
