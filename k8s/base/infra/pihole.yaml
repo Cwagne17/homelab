@@ -33,6 +33,21 @@ spec:
         podAnnotations:
           sidecar.istio.io/inject: "false"
 
+        # Override probes for Pi-hole v5 compatibility
+        probes:
+          liveness:
+            enabled: true
+            initialDelaySeconds: 60
+            failureThreshold: 10
+            timeoutSeconds: 5
+            scheme: HTTP
+          readiness:
+            enabled: true
+            initialDelaySeconds: 60
+            failureThreshold: 10
+            timeoutSeconds: 5
+            scheme: HTTP
+
         persistentVolumeClaim:
           enabled: true
 
