@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - jellyfin-media-pvc.yaml
   - jellyfin.yaml
+  - netbox.yaml
