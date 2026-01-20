@@ -7,7 +7,6 @@ terraform {
     region         = "us-east-1"
     dynamodb_table = "homelab-terraform-locks"
     encrypt        = true
-    profile        = "chris-personal-mgmt"
   }
 
   required_providers {

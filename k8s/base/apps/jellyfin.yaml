@@ -15,8 +15,6 @@ spec:
         service:
           type: LoadBalancer
           loadBalancerIP: 10.23.45.241
-          annotations:
-            external-dns.alpha.kubernetes.io/hostname: jellyfin.home.arpa
 
         # Let the chart manage config storage
         persistence:

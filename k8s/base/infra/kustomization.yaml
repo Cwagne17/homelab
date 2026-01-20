@@ -13,11 +13,6 @@ resources:
   - istio-base.yaml
   - istio-istiod.yaml
 
-  # DNS and service discovery
-  - pihole-custom-dns.yaml
-  - pihole.yaml
-  - external-dns.yaml
-
   # Install MetalLB before anything that needs LoadBalancer services
   # or static IPs from a LAN IP pool
   - metallb.yaml

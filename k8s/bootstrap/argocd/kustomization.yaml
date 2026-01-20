@@ -16,8 +16,3 @@ patches:
     target:
       kind: Service
       name: argocd-server
-
-  - path: patches/argocd-server-external-dns.patch.yaml
-    target:
-      kind: Service
-      name: argocd-server
