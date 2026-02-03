@@ -29,7 +29,7 @@ spec:
         podSecurityContext:
           fsGroup: 3001
         securityContext:
-          runAsUser: 1001
+          runAsUser: 3000
           runAsGroup: 3001
   destination:
     server: https://kubernetes.default.svc
