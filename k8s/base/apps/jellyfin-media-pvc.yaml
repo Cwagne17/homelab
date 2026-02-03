@@ -11,6 +11,11 @@ spec:
   accessModes: ["ReadWriteMany"]
   persistentVolumeReclaimPolicy: Retain
   storageClassName: ""
+  mountOptions:
+    - nfsvers=3
+    - hard
+    - noatime
+    - nolock
   nfs:
     server: 10.23.45.121
     path: /mnt/tank/media
