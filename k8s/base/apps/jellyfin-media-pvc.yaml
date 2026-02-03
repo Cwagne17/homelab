@@ -12,10 +12,9 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: ""
   mountOptions:
-    - nfsvers=3
+    - vers=4.1
     - hard
     - noatime
-    - nolock
   nfs:
     server: 10.23.45.121
     path: /mnt/tank/media
